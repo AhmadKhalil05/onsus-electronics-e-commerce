@@ -2,14 +2,24 @@ import Footer1 from "@/components/footers/Footer1";
 import Header4 from "@/components/headers/Header4";
 import MetaComponent from "@/components/common/MetaComponent";
 import { Link } from "react-router-dom";
-import React from "react";
+import { useAuth } from "react-oidc-context";
 
 const metadata = {
-  title: "Login — Onsus Electronics",
-  description: "Sign in (demo — no real authentication).",
+  title: "Login — GreatMate",
+  description: "Sign in to your GreatMate account.",
 };
 
 export default function LoginPage() {
+  const auth = useAuth();
+
+  const handleLogin = () => {
+    auth.signinRedirect();
+  };
+
+  const handleGoogleLogin = () => {
+    auth.signinRedirect({ extraQueryParams: { identity_provider: "Google" } });
+  };
+
   return (
     <>
       <MetaComponent meta={metadata} />
@@ -18,40 +28,19 @@ export default function LoginPage() {
         <div className="container" style={{ maxWidth: 480 }}>
           <div className="modal-log-wrap list-file-delete border rounded-3 p-4 p-lg-5 bg-white shadow-sm">
             <h5 className="title fw-semibold mb-4">Log in</h5>
-            <form
-              action="#"
-              className="form-log"
-              onSubmit={(e) => e.preventDefault()}
-            >
-              <div className="form-content">
-                <fieldset className="mb-3">
-                  <label className="fw-semibold body-md-2 d-block mb-1">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    className="w-100"
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                  />
-                </fieldset>
-                <fieldset className="mb-3">
-                  <label className="fw-semibold body-md-2 d-block mb-1">
-                    Password *
-                  </label>
-                  <input
-                    type="password"
-                    className="w-100"
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                  />
-                </fieldset>
-                <p className="body-text-3 text-end mb-3">
-                  <span className="text-main-2">Demo only — no real login</span>
-                </p>
-              </div>
-              <button type="submit" className="tf-btn w-100 text-white mb-3">
-                Login
+            <div className="form-content d-flex flex-column gap-3">
+              <button
+                onClick={handleLogin}
+                className="tf-btn w-100 text-white"
+              >
+                Continue with Email
+              </button>
+              <button
+                onClick={handleGoogleLogin}
+                className="tf-btn btn-line w-100"
+              >
+                <i className="icon icon-google me-2" />
+                Continue with Google
               </button>
               <p className="body-text-3 text-center mb-0">
                 Don&apos;t have an account?{" "}
@@ -59,7 +48,7 @@ export default function LoginPage() {
                   Register
                 </Link>
               </p>
-            </form>
+            </div>
           </div>
         </div>
       </section>
