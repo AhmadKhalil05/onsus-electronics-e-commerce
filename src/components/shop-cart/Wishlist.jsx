@@ -14,7 +14,11 @@ export default function Wishlist() {
   } = useContextElement();
   const [items, setItems] = useState([]);
   useEffect(() => {
-    setItems([...products.filter((elm) => wishList.includes(elm.id))]);
+    setItems([
+      ...products.filter((elm) =>
+        wishList.some((w) => Number(w) === Number(elm.id))
+      ),
+    ]);
   }, [wishList, products]);
   return (
     <div className="tf-sp-2">

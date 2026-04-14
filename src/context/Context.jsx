@@ -1,3 +1,10 @@
+import { showApiError } from "@/api/errors";
+import {
+  addWishlistItem,
+  fetchWishlist,
+  removeWishlistItem,
+} from "@/api/wishlist";
+import { useUserAuth } from "@/context/UserAuthContext";
 import { useCatalog } from "@/context/CatalogContext";
 
 import React, { useEffect } from "react";
@@ -8,6 +15,7 @@ export const useContextElement = () => {
 };
 
 export default function Context({ children }) {
+  const { isAuthenticated, isLoading: authLoading, user } = useUserAuth();
   const { products: catalogProducts, getProductById } = useCatalog();
   const [cartProducts, setCartProducts] = useState([]);
   const [wishList, setWishList] = useState([]);
@@ -64,18 +72,43 @@ export default function Context({ children }) {
     }
   };
 
+  const wishlistAuthed =
+    isAuthenticated && !authLoading && Boolean(user?.userId);
+
   const addToWishlist = (id) => {
-    if (!wishList.includes(id)) {
-      setWishList((pre) => [...pre, id]);
-      //   openWistlistModal();
+    const idNum = Number(id);
+    if (!Number.isFinite(idNum)) return;
+    const exists = wishList.some((x) => Number(x) === idNum);
+
+    if (!exists) {
+      setWishList((pre) => [...pre, idNum]);
+      if (wishlistAuthed) {
+        addWishlistItem(idNum).catch((err) => {
+          showApiError("Add to wishlist", err);
+          setWishList((pre) => pre.filter((x) => Number(x) !== idNum));
+        });
+      }
     } else {
-      setWishList((pre) => pre.filter((elm) => elm != id));
+      setWishList((pre) => pre.filter((x) => Number(x) !== idNum));
+      if (wishlistAuthed) {
+        removeWishlistItem(idNum).catch((err) => {
+          showApiError("Remove from wishlist", err);
+          setWishList((pre) => [...pre, idNum]);
+        });
+      }
     }
   };
 
   const removeFromWishlist = (id) => {
-    if (wishList.includes(id)) {
-      setWishList((pre) => [...pre.filter((elm) => elm != id)]);
+    const idNum = Number(id);
+    if (!Number.isFinite(idNum)) return;
+    if (!wishList.some((x) => Number(x) === idNum)) return;
+    setWishList((pre) => pre.filter((x) => Number(x) !== idNum));
+    if (wishlistAuthed) {
+      removeWishlistItem(idNum).catch((err) => {
+        showApiError("Remove from wishlist", err);
+        setWishList((pre) => [...pre, idNum]);
+      });
     }
   };
   const addToCompareItem = (id) => {
@@ -88,12 +121,8 @@ export default function Context({ children }) {
       setCompareItem((pre) => [...pre.filter((elm) => elm != id)]);
     }
   };
-  const isAddedtoWishlist = (id) => {
-    if (wishList.includes(id)) {
-      return true;
-    }
-    return false;
-  };
+  const isAddedtoWishlist = (id) =>
+    wishList.some((x) => Number(x) === Number(id));
   const isAddedtoCompareItem = (id) => {
     if (compareItem.includes(id)) {
       return true;
@@ -116,6 +145,22 @@ export default function Context({ children }) {
       setWishList(items);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || authLoading || !user?.userId) return;
+    const userId = user.userId;
+    let cancelled = false;
+    fetchWishlist(userId)
+      .then((ids) => {
+        if (!cancelled) setWishList(ids);
+      })
+      .catch((err) => {
+        showApiError("Load wishlist", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, authLoading, user?.userId]);
 
   useEffect(() => {
     localStorage.setItem("wishlist", JSON.stringify(wishList));

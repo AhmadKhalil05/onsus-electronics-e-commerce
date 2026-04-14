@@ -1,8 +1,9 @@
 import Footer1 from "@/components/footers/Footer1";
 import Header4 from "@/components/headers/Header4";
 import MetaComponent from "@/components/common/MetaComponent";
-import { Link } from "react-router-dom";
-import { useAuth } from "react-oidc-context";
+import { useUserAuth } from "@/context/UserAuthContext";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 const metadata = {
   title: "Login — GreatMate",
@@ -10,14 +11,54 @@ const metadata = {
 };
 
 export default function LoginPage() {
-  const auth = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { signInWithEmailPassword, signInWithGoogle, isAuthenticated } =
+    useUserAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleLogin = () => {
-    auth.signinRedirect();
+  const nextPath = searchParams.get("next") || "/";
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(nextPath, { replace: true });
+    }
+  }, [isAuthenticated, navigate, nextPath]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSubmitting(true);
+    try {
+      const result = await signInWithEmailPassword(
+        email.trim(),
+        password
+      );
+      if (result.ok) {
+        navigate(nextPath, { replace: true });
+      } else {
+        setError(result.message || "Sign-in could not complete.");
+      }
+    } catch (err) {
+      setError(
+        err?.message ||
+          "Sign-in failed. Check your email and password, or use Hosted UI / Google."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleGoogleLogin = () => {
-    auth.signinRedirect({ extraQueryParams: { identity_provider: "Google" } });
+  const handleGoogle = async () => {
+    setError("");
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err?.message || "Could not start Google sign-in.");
+    }
   };
 
   return (
@@ -27,16 +68,60 @@ export default function LoginPage() {
       <section className="tf-sp-3">
         <div className="container" style={{ maxWidth: 480 }}>
           <div className="modal-log-wrap list-file-delete border rounded-3 p-4 p-lg-5 bg-white shadow-sm">
-            <h5 className="title fw-semibold mb-4">Log in</h5>
-            <div className="form-content d-flex flex-column gap-3">
+            <h5 className="title fw-semibold mb-2">Log in</h5>
+            <p className="small text-secondary mb-4">
+              Email/password signs in through AWS Cognito (check the Network
+              tab for <code>cognito-idp</code> requests). Use the same user
+              your API authorizer expects.
+            </p>
+            {searchParams.get("session") === "expired" && (
+              <p className="small text-warning mb-3">
+                Your session expired. Please sign in again.
+              </p>
+            )}
+            {error && (
+              <div className="alert alert-danger small py-2 mb-3" role="alert">
+                {error}
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className="form-content d-flex flex-column gap-3">
+              <fieldset className="mb-0">
+                <label className="fw-semibold body-md-2 d-block mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  className="form-control"
+                  autoComplete="username"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+              </fieldset>
+              <fieldset className="mb-0">
+                <label className="fw-semibold body-md-2 d-block mb-1">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  className="form-control"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </fieldset>
               <button
-                onClick={handleLogin}
+                type="submit"
                 className="tf-btn w-100 text-white"
+                disabled={submitting}
               >
-                Continue with Email
+                {submitting ? "Signing in…" : "Sign in"}
               </button>
               <button
-                onClick={handleGoogleLogin}
+                type="button"
+                onClick={handleGoogle}
                 className="tf-btn btn-line w-100"
               >
                 <i className="icon icon-google me-2" />
@@ -48,7 +133,7 @@ export default function LoginPage() {
                   Register
                 </Link>
               </p>
-            </div>
+            </form>
           </div>
         </div>
       </section>

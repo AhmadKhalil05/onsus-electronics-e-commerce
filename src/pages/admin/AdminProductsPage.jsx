@@ -1,6 +1,41 @@
+import { showApiError } from "@/api/errors";
+import {
+  createProductApi,
+  parseCreatedProductId,
+  updateProductApi,
+} from "@/api/products";
+import { getCognitoIdToken } from "@/auth/session";
 import { useCatalog } from "@/context/CatalogContext";
 import { brands } from "@/data/filterOptions";
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+function draftToApiPayload(draft) {
+  return {
+    title: draft.title,
+    category: draft.category,
+    price: Number(draft.price),
+    oldPrice:
+      draft.oldPrice === "" || draft.oldPrice == null
+        ? null
+        : Number(draft.oldPrice),
+    imgSrc: draft.imgSrc,
+    imgHover: draft.imgHover || undefined,
+    thumbImages: draft.thumbImagesStr,
+    filterBrands: draft.filterBrands,
+    inNew: !!draft.inNew,
+    isTodaysDeals: !!draft.isTodaysDeals,
+    rating: Number(draft.rating),
+    sold: Number(draft.sold),
+    available: Number(draft.available),
+    progressWidth: draft.progressWidth,
+    countdownTimer: Number(draft.countdownTimer),
+    salePercentage:
+      draft.salePercentage === "" || draft.salePercentage == null
+        ? null
+        : draft.salePercentage,
+  };
+}
 
 function productToDraft(p) {
   return {
@@ -48,6 +83,7 @@ const emptyDraft = () => ({
 });
 
 export default function AdminProductsPage() {
+  const navigate = useNavigate();
   const {
     products,
     addProduct,
@@ -61,6 +97,7 @@ export default function AdminProductsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(emptyDraft);
+  const [saving, setSaving] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -99,8 +136,13 @@ export default function AdminProductsPage() {
     });
   };
 
-  const save = (e) => {
+  const save = async (e) => {
     e.preventDefault();
+    if (!(await getCognitoIdToken())) {
+      navigate(`/login?next=${encodeURIComponent("/admin/products")}`);
+      return;
+    }
+
     const raw = {
       title: draft.title,
       category: draft.category,
@@ -121,12 +163,27 @@ export default function AdminProductsPage() {
         draft.salePercentage === "" ? null : draft.salePercentage,
     };
 
-    if (editingId != null) {
-      updateProduct(editingId, raw);
-    } else {
-      addProduct(raw);
+    const apiPayload = draftToApiPayload(draft);
+    setSaving(true);
+    try {
+      if (editingId != null) {
+        await updateProductApi(editingId, apiPayload);
+        updateProduct(editingId, raw);
+      } else {
+        const res = await createProductApi(apiPayload);
+        const serverId = parseCreatedProductId(res);
+        if (serverId != null) {
+          addProduct({ ...raw, id: serverId });
+        } else {
+          addProduct(raw);
+        }
+      }
+      closeModal();
+    } catch (err) {
+      showApiError("Save product", err);
+    } finally {
+      setSaving(false);
     }
-    closeModal();
   };
 
   const confirmDelete = (p) => {
@@ -186,7 +243,11 @@ export default function AdminProductsPage() {
         <div>
           <h1 className="h3 fw-bold mb-1">Products</h1>
           <p className="text-secondary small mb-0">
-            Full CRUD — stored locally in the browser.
+            Saves go to the API via{" "}
+            <code className="small">POST/PUT /admin/products</code> with an
+            Amplify <code className="small">idToken</code> (Bearer). Sign in at{" "}
+            <code className="small">/login</code> first; if you are not signed
+            in, Save sends you to login.
           </p>
         </div>
         <div className="d-flex flex-wrap gap-2">
@@ -557,8 +618,16 @@ export default function AdminProductsPage() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  {editingId != null ? "Save changes" : "Create product"}
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={saving}
+                >
+                  {saving
+                    ? "Saving…"
+                    : editingId != null
+                      ? "Save changes"
+                      : "Create product"}
                 </button>
               </div>
             </form>

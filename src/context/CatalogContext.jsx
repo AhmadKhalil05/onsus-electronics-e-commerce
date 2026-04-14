@@ -1,3 +1,6 @@
+import { showApiError } from "@/api/errors";
+import { fetchProducts } from "@/api/products";
+import { useUserAuth } from "@/context/UserAuthContext";
 import { cloneDefaultCatalog } from "@/data/products";
 import React, {
   createContext,
@@ -93,10 +96,42 @@ export function normalizeProduct(raw) {
 }
 
 export function CatalogProvider({ children }) {
+  const { isLoading: authLoading, isAuthenticated, user } = useUserAuth();
   const [products, setProducts] = useState(() => {
     const stored = loadStoredCatalog();
     return stored || cloneDefaultCatalog();
   });
+
+  useEffect(() => {
+    if (authLoading) return;
+    let cancelled = false;
+    fetchProducts()
+      .then((rawList) => {
+        if (cancelled) return;
+        if (!Array.isArray(rawList)) {
+          showApiError(
+            "Load products",
+            new Error(
+              "The server returned an unexpected shape (expected a JSON array of products)."
+            )
+          );
+          return;
+        }
+        const normalized = rawList.map((p, i) =>
+          normalizeProduct({
+            ...p,
+            id: p.id != null ? p.id : i + 1,
+          })
+        );
+        setProducts(normalized);
+      })
+      .catch((err) => {
+        showApiError("Load products", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, isAuthenticated, user?.userId]);
 
   useEffect(() => {
     try {
@@ -113,8 +148,13 @@ export function CatalogProvider({ children }) {
 
   const addProduct = useCallback((partial) => {
     setProducts((prev) => {
-      const nextId =
-        prev.length === 0
+      const hasServerId =
+        partial?.id != null &&
+        partial.id !== "" &&
+        Number.isFinite(Number(partial.id));
+      const nextId = hasServerId
+        ? Number(partial.id)
+        : prev.length === 0
           ? 1
           : Math.max(...prev.map((p) => Number(p.id) || 0)) + 1;
       const normalized = normalizeProduct({ ...partial, id: nextId });

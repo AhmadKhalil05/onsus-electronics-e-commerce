@@ -10,4 +10,19 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  /**
+   * AWS Amplify is large; pinning pre-bundled deps avoids intermittent
+   * "504 (Outdated Optimize Dep)" after installs or cache drift. If it
+   * happens again: stop dev server, delete node_modules/.vite, restart.
+   */
+  optimizeDeps: {
+    include: [
+      "aws-amplify",
+      "aws-amplify/auth",
+      "aws-amplify/utils",
+      "aws-amplify/auth/enable-oauth-listener",
+      "@aws-amplify/auth",
+      "@aws-amplify/core",
+    ],
+  },
 });
