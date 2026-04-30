@@ -1,4 +1,3 @@
-import { showApiError } from "@/api/errors";
 import { fetchProducts } from "@/api/products";
 import { useUserAuth } from "@/context/UserAuthContext";
 import { cloneDefaultCatalog } from "@/data/products";
@@ -126,7 +125,8 @@ export function CatalogProvider({ children }) {
         setProducts(normalized);
       })
       .catch((err) => {
-        showApiError("Load products", err);
+        // Keep storefront usable with local fallback catalog when API is unavailable.
+        console.warn("Load products from API failed; using local catalog fallback.", err);
       });
     return () => {
       cancelled = true;

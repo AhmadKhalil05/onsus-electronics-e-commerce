@@ -4,7 +4,7 @@ import {
   parseCreatedProductId,
   updateProductApi,
 } from "@/api/products";
-import { getCognitoIdToken } from "@/auth/session";
+import { requireIdTokenOrRedirect } from "@/auth/session";
 import { useCatalog } from "@/context/CatalogContext";
 import { brands } from "@/data/filterOptions";
 import React, { useMemo, useState } from "react";
@@ -138,8 +138,11 @@ export default function AdminProductsPage() {
 
   const save = async (e) => {
     e.preventDefault();
-    if (!(await getCognitoIdToken())) {
-      navigate(`/login?next=${encodeURIComponent("/admin/products")}`);
+    const idToken = await requireIdTokenOrRedirect({
+      navigate,
+      nextPath: "/admin/products",
+    });
+    if (!idToken) {
       return;
     }
 

@@ -1,4 +1,5 @@
 import { apiRequest } from "./http";
+import { API_ROUTES } from "@/config/api";
 
 /**
  * Normalizes common API envelope shapes to a plain array of product records.
@@ -20,7 +21,7 @@ export function parseProductsResponse(data) {
  * GET /admin/products — Bearer ID token attached via axios interceptor when signed in.
  */
 export async function fetchProducts() {
-  const data = await apiRequest("get", "/admin/products", {});
+  const data = await apiRequest("get", API_ROUTES.products, {});
   return parseProductsResponse(data);
 }
 
@@ -50,7 +51,7 @@ export function parseCreatedProductId(data) {
  * @param {Record<string, unknown>} payload
  */
 export function createProductApi(payload) {
-  return apiRequest("post", "/admin/products", { data: payload });
+  return apiRequest("post", API_ROUTES.products, { data: payload });
 }
 
 /**
@@ -60,7 +61,7 @@ export function createProductApi(payload) {
  */
 export function updateProductApi(productId, payload) {
   const id = encodeURIComponent(String(productId));
-  return apiRequest("put", `/admin/products/${id}`, {
+  return apiRequest("put", `${API_ROUTES.products}/${id}`, {
     data: { ...payload, id: productId },
   });
 }

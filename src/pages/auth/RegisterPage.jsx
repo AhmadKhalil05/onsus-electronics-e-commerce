@@ -15,9 +15,21 @@ const metadata = {
   description: "Create your GreatMate account.",
 };
 
+function toAuthUiError(err, fallback) {
+  const message = err?.message || "";
+  if (
+    message.includes("UserPool not configured") ||
+    message.includes("Auth UserPool not configured")
+  ) {
+    return "Cognito is not configured in this environment. Add VITE_COGNITO_USER_POOL_ID, VITE_COGNITO_USER_POOL_CLIENT_ID, and VITE_COGNITO_HOSTED_UI_DOMAIN to your .env file, then restart npm run dev.";
+  }
+  return message || fallback;
+}
+
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { isAuthenticated, signInWithGoogle } = useUserAuth();
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -42,7 +54,10 @@ export default function RegisterPage() {
         username: email.trim(),
         password,
         options: {
-          userAttributes: { email: email.trim() },
+          userAttributes: {
+            email: email.trim(),
+            name: fullName.trim(),
+          },
         },
       });
       const step = out.nextStep?.signUpStep;
@@ -57,7 +72,7 @@ export default function RegisterPage() {
         setInfo("Sign up submitted. You can try signing in.");
       }
     } catch (err) {
-      setError(err?.message || "Sign up failed.");
+      setError(toAuthUiError(err, "Sign up failed."));
     } finally {
       setSubmitting(false);
     }
@@ -75,7 +90,7 @@ export default function RegisterPage() {
       await amplifySignIn({ username: email.trim(), password });
       navigate("/", { replace: true });
     } catch (err) {
-      setError(err?.message || "Confirmation failed.");
+      setError(toAuthUiError(err, "Confirmation failed."));
     } finally {
       setSubmitting(false);
     }
@@ -86,7 +101,7 @@ export default function RegisterPage() {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setError(err?.message || "Could not start Google sign-up.");
+      setError(toAuthUiError(err, "Could not start Google sign-up."));
     }
   };
 
@@ -117,6 +132,20 @@ export default function RegisterPage() {
                 onSubmit={handleSignUp}
                 className="form-content d-flex flex-column gap-3"
               >
+                <fieldset className="mb-0">
+                  <label className="fw-semibold body-md-2 d-block mb-1">
+                    Full name
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    autoComplete="name"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Your full name"
+                  />
+                </fieldset>
                 <fieldset className="mb-0">
                   <label className="fw-semibold body-md-2 d-block mb-1">
                     Email

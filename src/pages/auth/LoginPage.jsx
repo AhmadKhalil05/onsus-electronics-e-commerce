@@ -10,6 +10,17 @@ const metadata = {
   description: "Sign in to your GreatMate account.",
 };
 
+function toAuthUiError(err, fallback) {
+  const message = err?.message || "";
+  if (
+    message.includes("UserPool not configured") ||
+    message.includes("Auth UserPool not configured")
+  ) {
+    return "Cognito is not configured in this environment. Add VITE_COGNITO_USER_POOL_ID, VITE_COGNITO_USER_POOL_CLIENT_ID, and VITE_COGNITO_HOSTED_UI_DOMAIN to your .env file, then restart npm run dev.";
+  }
+  return message || fallback;
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -44,8 +55,10 @@ export default function LoginPage() {
       }
     } catch (err) {
       setError(
-        err?.message ||
+        toAuthUiError(
+          err,
           "Sign-in failed. Check your email and password, or use Hosted UI / Google."
+        )
       );
     } finally {
       setSubmitting(false);
@@ -57,7 +70,7 @@ export default function LoginPage() {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setError(err?.message || "Could not start Google sign-in.");
+      setError(toAuthUiError(err, "Could not start Google sign-in."));
     }
   };
 
