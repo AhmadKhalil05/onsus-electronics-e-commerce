@@ -1,21 +1,17 @@
 import { Amplify } from "aws-amplify";
 
 /** @type {string} */
-const userPoolId =
-  import.meta.env.VITE_COGNITO_USER_POOL_ID ?? "us-east-1_dRfqHOPSp";
+const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID ?? "";
 
 /** @type {string} */
-const userPoolClientId =
-  import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID ??
-  "7vd64o8bjjqof0t2qh3la47ijg";
+const userPoolClientId = import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID ?? "";
 
 /**
  * Hosted UI domain (no https://). Enables Google / social via signInWithRedirect.
  * Override with VITE_COGNITO_HOSTED_UI_DOMAIN if your domain differs.
  */
 const hostedUiDomain =
-  import.meta.env.VITE_COGNITO_HOSTED_UI_DOMAIN ??
-  "us-east-1drfqhopsp.auth.us-east-1.amazoncognito.com";
+  import.meta.env.VITE_COGNITO_HOSTED_UI_DOMAIN ?? "";
 
 const origin =
   typeof window !== "undefined"
@@ -40,5 +36,11 @@ Amplify.configure({
     },
   },
 });
+
+if (!userPoolId || !userPoolClientId || !hostedUiDomain) {
+  console.warn(
+    "Cognito env vars are missing. Set VITE_COGNITO_USER_POOL_ID, VITE_COGNITO_USER_POOL_CLIENT_ID, and VITE_COGNITO_HOSTED_UI_DOMAIN."
+  );
+}
 
 export { userPoolClientId, userPoolId };

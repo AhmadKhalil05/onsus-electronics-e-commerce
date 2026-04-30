@@ -2,6 +2,11 @@ import { API_BASE_URL } from "@/config/api";
 import { fetchAuthSession } from "aws-amplify/auth";
 import axios from "axios";
 
+const tokenType =
+  import.meta.env.VITE_API_AUTH_TOKEN_TYPE === "access"
+    ? "accessToken"
+    : "idToken";
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -13,12 +18,10 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use(async (config) => {
   try {
     const { tokens } = await fetchAuthSession();
-    const idToken = tokens?.idToken;
-    if (idToken) {
+    const token = tokens?.[tokenType];
+    if (token) {
       const value =
-        typeof idToken.toString === "function"
-          ? idToken.toString()
-          : String(idToken);
+        typeof token.toString === "function" ? token.toString() : String(token);
       if (value) {
         config.headers.Authorization = `Bearer ${value}`;
       }
@@ -47,6 +50,7 @@ export function withBearer(config, idToken) {
 /**
  * JSON request against the API. Authorization is attached automatically when signed in with Amplify.
  * You can still pass `idToken` to override the header for rare cases.
+ * Token source is configurable with VITE_API_AUTH_TOKEN_TYPE=id|access.
  * @param {import("axios").Method} method
  * @param {string} path relative to API base (e.g. "/wishlist")
  * @param {{ data?: unknown, params?: Record<string, string>, idToken?: string }} [options]

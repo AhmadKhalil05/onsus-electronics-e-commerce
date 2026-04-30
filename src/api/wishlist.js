@@ -1,4 +1,14 @@
 import { apiRequest } from "./http";
+import { API_ROUTES } from "@/config/api";
+
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
+function toFiniteId(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.trunc(n) : NaN;
+}
 
 /**
  * @param {unknown} data
@@ -11,14 +21,12 @@ export function parseWishlistProductIds(data) {
       .map((item) => {
         if (typeof item === "number" && Number.isFinite(item)) return item;
         if (typeof item === "string" && item.trim() !== "") {
-          const n = Number(item);
-          return Number.isFinite(n) ? n : NaN;
+          return toFiniteId(item);
         }
         if (item && typeof item === "object") {
           const o = /** @type {Record<string, unknown>} */ (item);
           const id = o.productId ?? o.product_id ?? o.id;
-          const n = Number(id);
-          return Number.isFinite(n) ? n : NaN;
+          return toFiniteId(id);
         }
         return NaN;
       })
@@ -26,6 +34,11 @@ export function parseWishlistProductIds(data) {
   }
   if (typeof data === "object") {
     const o = /** @type {Record<string, unknown>} */ (data);
+    const directId = o.productId ?? o.product_id ?? o.id;
+    if (directId != null) {
+      const n = toFiniteId(directId);
+      return Number.isFinite(n) ? [n] : [];
+    }
     const nested = o.productIds ?? o.items ?? o.wishlist ?? o.data;
     if (nested !== undefined) return parseWishlistProductIds(nested);
   }
@@ -33,32 +46,29 @@ export function parseWishlistProductIds(data) {
 }
 
 /**
- * GET /wishlist?userId=… — Bearer from Amplify interceptor.
- * @param {string} userId Cognito `sub` (same as getCurrentUser().userId)
+ * GET /wishlist — Bearer from Amplify interceptor.
  */
-export async function fetchWishlist(userId) {
-  const data = await apiRequest("get", "/wishlist", {
-    params: { userId },
-  });
+export async function fetchWishlist() {
+  const data = await apiRequest("get", API_ROUTES.wishlist, {});
   return parseWishlistProductIds(data);
 }
 
 /**
- * POST /wishlist
- * @param {number} productId
+ * PUT /wishlist with full list (matches Lambda design keyed by userId claim).
+ * @param {number[]} productIds
  */
-export function addWishlistItem(productId) {
-  return apiRequest("post", "/wishlist", {
-    data: { productId: Math.trunc(Number(productId)) },
+export function replaceWishlist(productIds) {
+  const items = Array.from(
+    new Set((productIds || []).map((id) => toFiniteId(id)).filter(Number.isFinite))
+  );
+  return apiRequest("put", API_ROUTES.wishlist, {
+    data: { items },
   });
 }
 
 /**
- * DELETE /wishlist (JSON body)
- * @param {number} productId
+ * DELETE /wishlist (clears list for current user).
  */
-export function removeWishlistItem(productId) {
-  return apiRequest("delete", "/wishlist", {
-    data: { productId: Math.trunc(Number(productId)) },
-  });
+export function clearWishlist() {
+  return apiRequest("delete", API_ROUTES.wishlist, {});
 }

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 
 import { Link } from "react-router-dom";
-import axios from "axios";
+import { formatApiError, subscribeNewsletter } from "@/api";
 export default function Footer1({ fullWidth = false }) {
   const [success, setSuccess] = useState(true);
   const [showMessage, setShowMessage] = useState(false);
+  const [message, setMessage] = useState("");
   const handleShowMessage = () => {
     setShowMessage(true);
     setTimeout(() => {
@@ -12,30 +13,19 @@ export default function Footer1({ fullWidth = false }) {
     }, 2000);
   };
   const sendEmail = async (e) => {
-    e.preventDefault(); // Prevent default form submission behavior
+    e.preventDefault();
     const email = e.target.email.value;
 
     try {
-      const response = await axios.post(
-        "https://express-brevomail.vercel.app/api/contacts",
-        {
-          email,
-        }
-      );
-
-      if ([200, 201].includes(response.status)) {
-        e.target.reset(); // Reset the form
-        setSuccess(true); // Set success state
-        handleShowMessage();
-      } else {
-        setSuccess(false); // Handle unexpected responses
-        handleShowMessage();
-      }
-    } catch (error) {
-      console.error("Error:", error.response?.data || "An error occurred");
-      setSuccess(false); // Set error state
+      await subscribeNewsletter(email);
+      e.target.reset();
+      setSuccess(true);
+      setMessage("You have successfully subscribed.");
       handleShowMessage();
-      e.target.reset(); // Reset the form
+    } catch (err) {
+      setSuccess(false);
+      setMessage(formatApiError(err, "Could not subscribe right now."));
+      handleShowMessage();
     }
   };
   useEffect(() => {
@@ -286,10 +276,12 @@ export default function Footer1({ fullWidth = false }) {
                 >
                   {success ? (
                     <p style={{ color: "rgb(52, 168, 83)" }}>
-                      You have successfully subscribed.
+                      {message || "You have successfully subscribed."}
                     </p>
                   ) : (
-                    <p style={{ color: "red" }}>Something went wrong</p>
+                    <p style={{ color: "red" }}>
+                      {message || "Something went wrong"}
+                    </p>
                   )}
                 </div>
                 <div className="subscribe-content">

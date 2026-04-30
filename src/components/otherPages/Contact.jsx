@@ -1,6 +1,51 @@
 import React from "react";
+import { sendContactMessage } from "@/api";
+import { formatApiError } from "@/api/errors";
 
 export default function Contact() {
+  const [form, setForm] = React.useState({
+    name: "",
+    subject: "",
+    message: "",
+    email: "",
+  });
+  const [status, setStatus] = React.useState({ type: "", message: "" });
+  const [submitting, setSubmitting] = React.useState(false);
+
+  const onChange = (event) => {
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const onSubmit = async (event) => {
+    event.preventDefault();
+    setStatus({ type: "", message: "" });
+    setSubmitting(true);
+    try {
+      await sendContactMessage({
+        name: form.name.trim(),
+        subject: form.subject.trim(),
+        message: form.message.trim(),
+        email: form.email.trim() || undefined,
+      });
+      setStatus({
+        type: "success",
+        message: "Message sent successfully. Our team will contact you soon.",
+      });
+      setForm({ name: "", subject: "", message: "", email: "" });
+    } catch (err) {
+      setStatus({
+        type: "error",
+        message: formatApiError(
+          err,
+          "Could not send your message now. Please try again later."
+        ),
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <section className="tf-sp-2">
       <div className="container">
@@ -42,26 +87,62 @@ export default function Contact() {
                   hours.
                 </p>
               </div>
-              <form action="#" className="form-contact def">
+              <form onSubmit={onSubmit} className="form-contact def">
                 <fieldset>
                   <label>Name</label>
-                  <input type="text" required="" />
+                  <input
+                    type="text"
+                    name="name"
+                    value={form.name}
+                    onChange={onChange}
+                    required
+                  />
+                </fieldset>
+                <fieldset>
+                  <label>Email (optional)</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={onChange}
+                  />
                 </fieldset>
                 <fieldset>
                   <label>Subject</label>
-                  <input type="text" required="" />
+                  <input
+                    type="text"
+                    name="subject"
+                    value={form.subject}
+                    onChange={onChange}
+                    required
+                  />
                 </fieldset>
                 <fieldset className="d-flex flex-column">
                   <label>Your message</label>
                   <textarea
                     style={{ height: 170 }}
-                    required=""
-                    defaultValue={""}
+                    name="message"
+                    value={form.message}
+                    onChange={onChange}
+                    required
                   />
                 </fieldset>
+                {status.message && (
+                  <p
+                    className={`small mb-0 ${
+                      status.type === "success" ? "text-success" : "text-danger"
+                    }`}
+                  >
+                    {status.message}
+                  </p>
+                )}
                 <div className="box-btn-submit">
-                  <button type="submit" className="tf-btn text-white w-100">
-                    Send message
+                  <button
+                    type="submit"
+                    className="tf-btn text-white w-100"
+                    disabled={submitting}
+                  >
+                    {submitting ? "Sending..." : "Send message"}
                   </button>
                 </div>
               </form>

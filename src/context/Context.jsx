@@ -1,8 +1,7 @@
-import { showApiError } from "@/api/errors";
 import {
-  addWishlistItem,
+  clearWishlist,
   fetchWishlist,
-  removeWishlistItem,
+  replaceWishlist,
 } from "@/api/wishlist";
 import { useUserAuth } from "@/context/UserAuthContext";
 import { useCatalog } from "@/context/CatalogContext";
@@ -75,27 +74,30 @@ export default function Context({ children }) {
   const wishlistAuthed =
     isAuthenticated && !authLoading && Boolean(user?.userId);
 
+  const syncWishlistRemote = (nextIds, rollbackIds, contextLabel) => {
+    if (!wishlistAuthed) return;
+    const op = nextIds.length ? replaceWishlist(nextIds) : clearWishlist();
+    op.catch((err) => {
+      console.warn(`${contextLabel} failed; keeping local wishlist state.`, err);
+      setWishList(rollbackIds);
+    });
+  };
+
   const addToWishlist = (id) => {
     const idNum = Number(id);
     if (!Number.isFinite(idNum)) return;
     const exists = wishList.some((x) => Number(x) === idNum);
 
     if (!exists) {
-      setWishList((pre) => [...pre, idNum]);
-      if (wishlistAuthed) {
-        addWishlistItem(idNum).catch((err) => {
-          showApiError("Add to wishlist", err);
-          setWishList((pre) => pre.filter((x) => Number(x) !== idNum));
-        });
-      }
+      const rollbackIds = [...wishList];
+      const nextIds = [...wishList, idNum];
+      setWishList(nextIds);
+      syncWishlistRemote(nextIds, rollbackIds, "Add to wishlist");
     } else {
-      setWishList((pre) => pre.filter((x) => Number(x) !== idNum));
-      if (wishlistAuthed) {
-        removeWishlistItem(idNum).catch((err) => {
-          showApiError("Remove from wishlist", err);
-          setWishList((pre) => [...pre, idNum]);
-        });
-      }
+      const rollbackIds = [...wishList];
+      const nextIds = wishList.filter((x) => Number(x) !== idNum);
+      setWishList(nextIds);
+      syncWishlistRemote(nextIds, rollbackIds, "Remove from wishlist");
     }
   };
 
@@ -103,13 +105,10 @@ export default function Context({ children }) {
     const idNum = Number(id);
     if (!Number.isFinite(idNum)) return;
     if (!wishList.some((x) => Number(x) === idNum)) return;
-    setWishList((pre) => pre.filter((x) => Number(x) !== idNum));
-    if (wishlistAuthed) {
-      removeWishlistItem(idNum).catch((err) => {
-        showApiError("Remove from wishlist", err);
-        setWishList((pre) => [...pre, idNum]);
-      });
-    }
+    const rollbackIds = [...wishList];
+    const nextIds = wishList.filter((x) => Number(x) !== idNum);
+    setWishList(nextIds);
+    syncWishlistRemote(nextIds, rollbackIds, "Remove from wishlist");
   };
   const addToCompareItem = (id) => {
     if (!compareItem.includes(id)) {
@@ -148,14 +147,13 @@ export default function Context({ children }) {
 
   useEffect(() => {
     if (!isAuthenticated || authLoading || !user?.userId) return;
-    const userId = user.userId;
     let cancelled = false;
-    fetchWishlist(userId)
+    fetchWishlist()
       .then((ids) => {
         if (!cancelled) setWishList(ids);
       })
       .catch((err) => {
-        showApiError("Load wishlist", err);
+        console.warn("Load wishlist failed; using local wishlist fallback.", err);
       });
     return () => {
       cancelled = true;
