@@ -1,6 +1,7 @@
 import { showApiError } from "@/api/errors";
 import {
   createProductApi,
+  deleteProductApi,
   parseCreatedProductId,
   updateProductApi,
 } from "@/api/products";
@@ -11,6 +12,10 @@ import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function draftToApiPayload(draft) {
+  const thumbImages = String(draft.thumbImagesStr || "")
+    .split(/[,\n]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
   return {
     title: draft.title,
     category: draft.category,
@@ -21,7 +26,7 @@ function draftToApiPayload(draft) {
         : Number(draft.oldPrice),
     imgSrc: draft.imgSrc,
     imgHover: draft.imgHover || undefined,
-    thumbImages: draft.thumbImagesStr,
+    thumbImages,
     filterBrands: draft.filterBrands,
     inNew: !!draft.inNew,
     isTodaysDeals: !!draft.isTodaysDeals,
@@ -89,8 +94,6 @@ export default function AdminProductsPage() {
     addProduct,
     updateProduct,
     deleteProduct,
-    resetToDefault,
-    importCatalog,
   } = useCatalog();
 
   const [query, setQuery] = useState("");
@@ -146,6 +149,10 @@ export default function AdminProductsPage() {
       return;
     }
 
+    const thumbImages = String(draft.thumbImagesStr || "")
+      .split(/[,\n]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     const raw = {
       title: draft.title,
       category: draft.category,
@@ -153,7 +160,7 @@ export default function AdminProductsPage() {
       oldPrice: draft.oldPrice === "" ? null : draft.oldPrice,
       imgSrc: draft.imgSrc,
       imgHover: draft.imgHover || undefined,
-      thumbImages: draft.thumbImagesStr,
+      thumbImages,
       filterBrands: draft.filterBrands,
       inNew: draft.inNew,
       isTodaysDeals: draft.isTodaysDeals,
@@ -170,10 +177,10 @@ export default function AdminProductsPage() {
     setSaving(true);
     try {
       if (editingId != null) {
-        await updateProductApi(editingId, apiPayload);
+        await updateProductApi(editingId, apiPayload, idToken);
         updateProduct(editingId, raw);
       } else {
-        const res = await createProductApi(apiPayload);
+        const res = await createProductApi(apiPayload, idToken);
         const serverId = parseCreatedProductId(res);
         if (serverId != null) {
           addProduct({ ...raw, id: serverId });
@@ -189,54 +196,24 @@ export default function AdminProductsPage() {
     }
   };
 
-  const confirmDelete = (p) => {
+  const confirmDelete = async (p) => {
     if (
-      window.confirm(
-        `Delete “${p.title}” (ID ${p.id})? This cannot be undone.`
-      )
+      !window.confirm(`Delete “${p.title}” (ID ${p.id})? This cannot be undone.`)
     ) {
-      deleteProduct(p.id);
+      return;
     }
-  };
-
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify(products, null, 2)], {
-      type: "application/json",
+    const idToken = await requireIdTokenOrRedirect({
+      navigate,
+      nextPath: "/admin/products",
     });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `onsus-catalog-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-
-  const onImportFile = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result);
-        if (importCatalog(data)) {
-          window.alert("Catalog imported.");
-        } else {
-          window.alert("Invalid JSON array.");
-        }
-      } catch {
-        window.alert("Could not parse JSON.");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
-
-  const confirmReset = () => {
-    if (
-      window.confirm(
-        "Reset catalog to built-in default? Custom catalog in localStorage will be cleared."
-      )
-    ) {
-      resetToDefault();
+    if (!idToken) {
+      return;
+    }
+    try {
+      await deleteProductApi(p.id, idToken);
+      deleteProduct(p.id);
+    } catch (err) {
+      showApiError("Delete product", err);
     }
   };
 
@@ -246,39 +223,14 @@ export default function AdminProductsPage() {
         <div>
           <h1 className="h3 fw-bold mb-1">Products</h1>
           <p className="text-secondary small mb-0">
-            Saves go to the API via{" "}
-            <code className="small">POST/PUT /admin/products</code> with an
-            Amplify <code className="small">idToken</code> (Bearer). Sign in at{" "}
-            <code className="small">/login</code> first; if you are not signed
-            in, Save sends you to login.
+            Product list and CRUD actions now come directly from API Gateway.
+            Create, edit, and delete use the admin endpoint with your Cognito{" "}
+            <code className="small">idToken</code> (Bearer).
           </p>
         </div>
         <div className="d-flex flex-wrap gap-2">
           <button type="button" className="btn btn-primary" onClick={openCreate}>
             + Add product
-          </button>
-          <button
-            type="button"
-            className="btn btn-outline-secondary"
-            onClick={exportJson}
-          >
-            Export JSON
-          </button>
-          <label className="btn btn-outline-secondary mb-0">
-            Import JSON
-            <input
-              type="file"
-              accept="application/json"
-              className="d-none"
-              onChange={onImportFile}
-            />
-          </label>
-          <button
-            type="button"
-            className="btn btn-outline-danger"
-            onClick={confirmReset}
-          >
-            Reset default
           </button>
         </div>
       </div>

@@ -17,6 +17,13 @@ export default function Quickview() {
   const [quantity, setQuantity] = useState(1); // Initial quantity is 1
   const { quickViewItem, addProductToCart, isAddedToCartProducts } =
     useContextElement();
+  const safePrice = Number(quickViewItem?.price);
+  const displayPrice = Number.isFinite(safePrice) ? safePrice : 0;
+  const safeOldPrice = Number(quickViewItem?.oldPrice);
+  const hasOldPrice = Number.isFinite(safeOldPrice) && safeOldPrice > 0;
+  const productId = quickViewItem?.id ?? "";
+  const productTitle = quickViewItem?.title || "Product";
+
   useEffect(() => {
     const thumbs = quickViewItem?.thumbImages?.filter(Boolean);
     if (thumbs?.length) {
@@ -61,7 +68,7 @@ export default function Quickview() {
                 {quickviewImages.map((elm, i) => (
                   <SwiperSlide key={i} className="swiper-slide">
                     <Link
-                      to={`/product-detail/${quickViewItem.id}`}
+                      to={`/product-detail/${productId}`}
                       className="d-block tf-image-view"
                     >
                       <img
@@ -121,12 +128,10 @@ export default function Quickview() {
                   </p>
                   <h5 className="product-info-name fw-semibold">
                     <Link
-                      to={`/product-detail/${quickViewItem.id}`}
+                      to={`/product-detail/${productId}`}
                       className="link"
                     >
-                      {quickViewItem.title ??
-                        `Elite Gourmet EKT1001B Electric BPA-Free Glass Kettle,
-                      Cordless 360° Base`}
+                      {productTitle}
                     </Link>
                   </h5>
                   <ul className="product-info-rate-wrap">
@@ -166,11 +171,11 @@ export default function Quickview() {
                 <div className="infor-center">
                   <div className="product-info-price">
                     <h4 className="text-primary">
-                      ${quickViewItem.price.toFixed(2)}
+                      ${displayPrice.toFixed(2)}
                     </h4>
-                    {quickViewItem.oldPrice && (
+                    {hasOldPrice && (
                       <span className="price-text text-main-2 old-price">
-                        ${quickViewItem.oldPrice.toFixed(2)}
+                        ${safeOldPrice.toFixed(2)}
                       </span>
                     )}
                   </div>
@@ -262,10 +267,10 @@ export default function Quickview() {
                   href="#shoppingCart"
                   className="tf-btn btn-gray"
                   data-bs-toggle="offcanvas"
-                  onClick={() => addProductToCart(quickViewItem.id, quantity)}
+                  onClick={() => addProductToCart(productId, quantity)}
                 >
                   <span className="text-white">
-                    {isAddedToCartProducts(quickViewItem.id)
+                    {isAddedToCartProducts(productId)
                       ? "Already Added"
                       : "Add To Cart"}
                   </span>

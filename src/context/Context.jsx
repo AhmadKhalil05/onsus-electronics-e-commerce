@@ -1,20 +1,22 @@
 import {
-  clearWishlist,
+  addWishlistItem,
   fetchWishlist,
-  replaceWishlist,
+  removeWishlistItem,
 } from "@/api/wishlist";
+import { fetchCart, updateCart } from "@/api/cart";
 import { useUserAuth } from "@/context/UserAuthContext";
 import { useCatalog } from "@/context/CatalogContext";
 
 import React, { useEffect } from "react";
 import { useContext, useState } from "react";
+import { useRef } from "react";
 const dataContext = React.createContext();
 export const useContextElement = () => {
   return useContext(dataContext);
 };
 
 export default function Context({ children }) {
-  const { isAuthenticated, isLoading: authLoading, user } = useUserAuth();
+  const { isAuthenticated, isLoading: authLoading } = useUserAuth();
   const { products: catalogProducts, getProductById } = useCatalog();
   const [cartProducts, setCartProducts] = useState([]);
   const [wishList, setWishList] = useState([]);
@@ -24,6 +26,8 @@ export default function Context({ children }) {
   );
   const [quickAddItem, setQuickAddItem] = useState(1);
   const [totalPrice, setTotalPrice] = useState(0);
+  const cartHydratedRef = useRef(false);
+  const cartSyncSkipRef = useRef(false);
 
   useEffect(() => {
     if (!catalogProducts.length) return;
@@ -71,44 +75,52 @@ export default function Context({ children }) {
     }
   };
 
-  const wishlistAuthed =
-    isAuthenticated && !authLoading && Boolean(user?.userId);
-
-  const syncWishlistRemote = (nextIds, rollbackIds, contextLabel) => {
-    if (!wishlistAuthed) return;
-    const op = nextIds.length ? replaceWishlist(nextIds) : clearWishlist();
-    op.catch((err) => {
-      console.warn(`${contextLabel} failed; keeping local wishlist state.`, err);
-      setWishList(rollbackIds);
-    });
-  };
+  const wishlistAuthed = isAuthenticated && !authLoading;
 
   const addToWishlist = (id) => {
-    const idNum = Number(id);
-    if (!Number.isFinite(idNum)) return;
-    const exists = wishList.some((x) => Number(x) === idNum);
+    const productId = String(id ?? "").trim();
+    if (!productId) return;
+    const exists = wishList.some((x) => String(x) === productId);
 
     if (!exists) {
       const rollbackIds = [...wishList];
-      const nextIds = [...wishList, idNum];
+      const nextIds = [...wishList, productId];
       setWishList(nextIds);
-      syncWishlistRemote(nextIds, rollbackIds, "Add to wishlist");
+      if (wishlistAuthed) {
+        addWishlistItem(productId).catch((err) => {
+          console.warn("Add to wishlist failed; keeping local wishlist state.", err);
+          setWishList(rollbackIds);
+        });
+      }
     } else {
       const rollbackIds = [...wishList];
-      const nextIds = wishList.filter((x) => Number(x) !== idNum);
+      const nextIds = wishList.filter((x) => String(x) !== productId);
       setWishList(nextIds);
-      syncWishlistRemote(nextIds, rollbackIds, "Remove from wishlist");
+      if (wishlistAuthed) {
+        removeWishlistItem(productId).catch((err) => {
+          console.warn(
+            "Remove from wishlist failed; keeping local wishlist state.",
+            err
+          );
+          setWishList(rollbackIds);
+        });
+      }
     }
   };
 
   const removeFromWishlist = (id) => {
-    const idNum = Number(id);
-    if (!Number.isFinite(idNum)) return;
-    if (!wishList.some((x) => Number(x) === idNum)) return;
+    const productId = String(id ?? "").trim();
+    if (!productId) return;
+    if (!wishList.some((x) => String(x) === productId)) return;
     const rollbackIds = [...wishList];
-    const nextIds = wishList.filter((x) => Number(x) !== idNum);
+    const nextIds = wishList.filter((x) => String(x) !== productId);
     setWishList(nextIds);
-    syncWishlistRemote(nextIds, rollbackIds, "Remove from wishlist");
+    if (wishlistAuthed) {
+      removeWishlistItem(productId).catch((err) => {
+        console.warn("Remove from wishlist failed; keeping local wishlist state.", err);
+        setWishList(rollbackIds);
+      });
+    }
   };
   const addToCompareItem = (id) => {
     if (!compareItem.includes(id)) {
@@ -121,7 +133,7 @@ export default function Context({ children }) {
     }
   };
   const isAddedtoWishlist = (id) =>
-    wishList.some((x) => Number(x) === Number(id));
+    wishList.some((x) => String(x) === String(id));
   const isAddedtoCompareItem = (id) => {
     if (compareItem.includes(id)) {
       return true;
@@ -146,7 +158,7 @@ export default function Context({ children }) {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated || authLoading || !user?.userId) return;
+    if (!isAuthenticated || authLoading) return;
     let cancelled = false;
     fetchWishlist()
       .then((ids) => {
@@ -158,13 +170,61 @@ export default function Context({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, authLoading, user?.userId]);
+  }, [isAuthenticated, authLoading]);
+
+  useEffect(() => {
+    if (!isAuthenticated || authLoading || !catalogProducts.length) {
+      return;
+    }
+    let cancelled = false;
+    fetchCart()
+      .then((items) => {
+        if (cancelled) return;
+        const next = items
+          .map((entry) => {
+            const base = getProductById(entry.productId);
+            if (!base) return null;
+            return {
+              ...base,
+              quantity: Math.max(1, Number(entry.quantity) || 1),
+            };
+          })
+          .filter(Boolean);
+        cartSyncSkipRef.current = true;
+        setCartProducts(next);
+        cartHydratedRef.current = true;
+      })
+      .catch((err) => {
+        cartHydratedRef.current = true;
+        console.warn("Load cart failed; keeping local cart fallback.", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, authLoading, catalogProducts, getProductById]);
+
+  useEffect(() => {
+    if (!isAuthenticated || authLoading) return;
+    if (!cartHydratedRef.current) return;
+    if (cartSyncSkipRef.current) {
+      cartSyncSkipRef.current = false;
+      return;
+    }
+    const items = cartProducts.map((item) => ({
+      productId: String(item.id),
+      quantity: Math.max(1, Number(item.quantity) || 1),
+    }));
+    updateCart({ items }).catch((err) => {
+      console.warn("Sync cart failed; local cart remains visible.", err);
+    });
+  }, [cartProducts, isAuthenticated, authLoading]);
 
   useEffect(() => {
     localStorage.setItem("wishlist", JSON.stringify(wishList));
   }, [wishList]);
 
   useEffect(() => {
+    if (!catalogProducts.length) return;
     const validIds = new Set(catalogProducts.map((p) => String(p.id)));
     setCartProducts((prev) =>
       prev.filter((item) => validIds.has(String(item.id)))

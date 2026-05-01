@@ -1,6 +1,6 @@
 import { fetchProducts } from "@/api/products";
+import { showApiError } from "@/api/errors";
 import { useUserAuth } from "@/context/UserAuthContext";
-import { cloneDefaultCatalog } from "@/data/products";
 import React, {
   createContext,
   useCallback,
@@ -9,8 +9,6 @@ import React, {
   useMemo,
   useState,
 } from "react";
-
-const STORAGE_KEY = "onsus_catalog_v1";
 
 const catalogContext = createContext(null);
 
@@ -22,19 +20,15 @@ export function useCatalog() {
   return ctx;
 }
 
-function loadStoredCatalog() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw);
-    if (!Array.isArray(data) || data.length === 0) return null;
-    return data;
-  } catch {
-    return null;
-  }
-}
-
 export function normalizeProduct(raw) {
+  const resolvedId =
+    raw.id != null && String(raw.id).trim()
+      ? String(raw.id)
+      : raw.productId != null && String(raw.productId).trim()
+        ? String(raw.productId)
+        : raw.product_id != null && String(raw.product_id).trim()
+          ? String(raw.product_id)
+          : "";
   const imgSrc = raw.imgSrc || "/images/store/p1.jpg";
   let thumbs = Array.isArray(raw.thumbImages)
     ? [...raw.thumbImages]
@@ -64,7 +58,8 @@ export function normalizeProduct(raw) {
   const brands = Array.isArray(raw.filterBrands) ? raw.filterBrands : [];
 
   return {
-    id: raw.id,
+    id: resolvedId,
+    productId: resolvedId,
     wowDelay: raw.wowDelay ?? "0s",
     imgSrc,
     thumbImages: thumbs,
@@ -96,10 +91,7 @@ export function normalizeProduct(raw) {
 
 export function CatalogProvider({ children }) {
   const { isLoading: authLoading, isAuthenticated, user } = useUserAuth();
-  const [products, setProducts] = useState(() => {
-    const stored = loadStoredCatalog();
-    return stored || cloneDefaultCatalog();
-  });
+  const [products, setProducts] = useState([]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -119,27 +111,27 @@ export function CatalogProvider({ children }) {
         const normalized = rawList.map((p, i) =>
           normalizeProduct({
             ...p,
-            id: p.id != null ? p.id : i + 1,
+            id:
+              p.id != null && String(p.id).trim()
+                ? p.id
+                : p.productId != null && String(p.productId).trim()
+                  ? p.productId
+                  : p.product_id != null && String(p.product_id).trim()
+                    ? p.product_id
+                    : `row-${i + 1}`,
           })
         );
         setProducts(normalized);
       })
       .catch((err) => {
-        // Keep storefront usable with local fallback catalog when API is unavailable.
-        console.warn("Load products from API failed; using local catalog fallback.", err);
+        if (cancelled) return;
+        setProducts([]);
+        showApiError("Load products", err);
       });
     return () => {
       cancelled = true;
     };
   }, [authLoading, isAuthenticated, user?.userId]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-    } catch (e) {
-      console.warn("Catalog save failed", e);
-    }
-  }, [products]);
 
   const getProductById = useCallback(
     (id) => products.find((p) => String(p.id) === String(id)),
@@ -149,14 +141,12 @@ export function CatalogProvider({ children }) {
   const addProduct = useCallback((partial) => {
     setProducts((prev) => {
       const hasServerId =
-        partial?.id != null &&
-        partial.id !== "" &&
-        Number.isFinite(Number(partial.id));
+        partial?.id != null && String(partial.id).trim() !== "";
       const nextId = hasServerId
-        ? Number(partial.id)
+        ? String(partial.id)
         : prev.length === 0
-          ? 1
-          : Math.max(...prev.map((p) => Number(p.id) || 0)) + 1;
+          ? "row-1"
+          : `row-${prev.length + 1}`;
       const normalized = normalizeProduct({ ...partial, id: nextId });
       return [...prev, normalized];
     });
@@ -176,23 +166,6 @@ export function CatalogProvider({ children }) {
     setProducts((prev) => prev.filter((p) => String(p.id) !== String(id)));
   }, []);
 
-  const resetToDefault = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setProducts(cloneDefaultCatalog());
-  }, []);
-
-  const importCatalog = useCallback((list) => {
-    if (!Array.isArray(list) || !list.length) return false;
-    const normalized = list.map((p, i) =>
-      normalizeProduct({
-        ...p,
-        id: p.id != null ? p.id : i + 1,
-      })
-    );
-    setProducts(normalized);
-    return true;
-  }, []);
-
   const value = useMemo(
     () => ({
       products,
@@ -200,8 +173,6 @@ export function CatalogProvider({ children }) {
       addProduct,
       updateProduct,
       deleteProduct,
-      resetToDefault,
-      importCatalog,
     }),
     [
       products,
@@ -209,8 +180,6 @@ export function CatalogProvider({ children }) {
       addProduct,
       updateProduct,
       deleteProduct,
-      resetToDefault,
-      importCatalog,
     ]
   );
 
