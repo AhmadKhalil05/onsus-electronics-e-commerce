@@ -7,6 +7,8 @@ import CartTotal from "../common/CartTotal";
 import WishlistLength from "../common/WishlistLength";
 import NavCategories from "./NavCategories";
 import SearchForm from "./SearchForm";
+import AccountDropdown from "./AccountDropdown";
+
 export default function Header2() {
   return (
     <header className="tf-header style-3">
@@ -37,6 +39,9 @@ export default function Header2() {
             <div className="col-md-3 col-5 d-flex align-items-center justify-content-end">
               <div className="header-right">
                 <ul className="nav-icon style-3">
+                  <li className="d-none d-xl-block">
+                    <AccountDropdown />
+                  </li>
                   <li className="d-none d-xxl-block">
                     <Link to={`/wishlist`} className="nav-icon-item">
                       <span className="icon position-relative">
@@ -81,35 +86,7 @@ export default function Header2() {
                 </ul>
                 <ul className="nav-icon justify-content-xl-center d-xl-none">
                   <li className="nav-account">
-                    <a
-                      href="#log"
-                      data-bs-toggle="modal"
-                      className="link nav-icon-item"
-                    >
-                      <span>
-                        <svg
-                          width={22}
-                          height={23}
-                          viewBox="0 0 22 23"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M10.9998 11.5283C5.20222 11.5283 0.485352 16.2452 0.485352 22.0428C0.485352 22.2952 0.69017 22.5 0.942518 22.5C1.19487 22.5 1.39968 22.2952 1.39968 22.0428C1.39968 16.749 5.70606 12.4426 10.9999 12.4426C16.2937 12.4426 20.6001 16.749 20.6001 22.0428C20.6001 22.2952 20.8049 22.5 21.0572 22.5C21.3096 22.5 21.5144 22.2952 21.5144 22.0428C21.5144 16.2443 16.7975 11.5283 10.9998 11.5283Z"
-                            fill="#333E48"
-                            stroke="#333E48"
-                            strokeWidth="0.3"
-                          />
-                          <path
-                            d="M10.9999 0.5C8.22767 0.5 5.97119 2.75557 5.97119 5.52866C5.97119 8.30174 8.22771 10.5573 10.9999 10.5573C13.772 10.5573 16.0285 8.30174 16.0285 5.52866C16.0285 2.75557 13.772 0.5 10.9999 0.5ZM10.9999 9.64303C8.73146 9.64303 6.88548 7.79705 6.88548 5.52866C6.88548 3.26027 8.73146 1.41429 10.9999 1.41429C13.2682 1.41429 15.1142 3.26027 15.1142 5.52866C15.1142 7.79705 13.2682 9.64303 10.9999 9.64303Z"
-                            fill="#333E48"
-                            stroke="#333E48"
-                            strokeWidth="0.3"
-                          />
-                        </svg>
-                      </span>
-                      <p className="body-small">Sign in</p>
-                    </a>
+                    <AccountDropdown />
                   </li>
                   <li className="nav-cart">
                     <a
