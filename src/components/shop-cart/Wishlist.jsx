@@ -43,7 +43,11 @@ export default function Wishlist() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((product, i) => (
+                {items.map((product, i) => {
+                  const productPath = `/product-detail/${encodeURIComponent(
+                    String(product.id)
+                  )}`;
+                  return (
                   <tr key={i} className="wishlist-item">
                     <td
                       className="wishlist-item_remove"
@@ -52,7 +56,7 @@ export default function Wishlist() {
                       <i className="icon-close remove link cs-pointer" />
                     </td>
                     <td className="wishlist-item_image">
-                      <Link to={`/product-detail/${product.id}`}>
+                      <Link to={productPath}>
                         <img
                           src={product.imgSrc}
                           alt="Image"
@@ -65,7 +69,7 @@ export default function Wishlist() {
                     <td className="wishlist-item_info">
                       <Link
                         className="text-line-clamp-2 body-md-2 fw-semibold text-secondary link"
-                        to={`/product-detail/${product.id}`}
+                        to={productPath}
                       >
                         {product.title}
                       </Link>
@@ -100,7 +104,8 @@ export default function Wishlist() {
                       </a>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
               <tfoot className="d-none">
                 <tr>

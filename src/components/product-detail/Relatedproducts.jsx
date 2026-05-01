@@ -54,12 +54,16 @@ export default function Relatedproducts({ excludeId }) {
           }}
           spaceBetween={15}
         >
-          {list.map((product) => (
+          {list.map((product) => {
+            const productPath = `/product-detail/${encodeURIComponent(
+              String(product.id)
+            )}`;
+            return (
             <SwiperSlide className="swiper-slide" key={product.id}>
               <div className="card-product">
                 <div className="card-product-wrapper">
                   <Link
-                    to={`/product-detail/${product.id}`}
+                    to={productPath}
                     className="product-img"
                   >
                     <img
@@ -105,7 +109,7 @@ export default function Relatedproducts({ excludeId }) {
                         {product.category}
                       </p>
                       <Link
-                        to={`/product-detail/${product.id}`}
+                        to={productPath}
                         className="name-product body-md-2 fw-semibold text-secondary link"
                       >
                         {product.title}
@@ -125,7 +129,8 @@ export default function Relatedproducts({ excludeId }) {
                 </div>
               </div>
             </SwiperSlide>
-          ))}
+            );
+          })}
           <div className="d-flex d-lg-none sw-dot-default sw-pagination-products justify-content-center spd67" />
         </Swiper>
       </div>

@@ -13,11 +13,12 @@ export default function ProductCards3({ product }) {
     addProductToCart,
     isAddedToCartProducts,
   } = useContextElement();
+  const productPath = `/product-detail/${encodeURIComponent(String(product.id))}`;
 
   return (
     <div className="card-product">
       <div className="card-product-wrapper">
-        <Link to={`/product-detail/${product.id}`} className="product-img">
+        <Link to={productPath} className="product-img">
           <img
             className="img-product ls-is-cached lazyloaded"
             src={product.imgSrc}
@@ -61,7 +62,7 @@ export default function ProductCards3({ product }) {
           <div>
             <p className="product-tag caption text-main-2 d-none">Headphone</p>
             <Link
-              to={`/product-detail/${product.id}`}
+              to={productPath}
               className="name-product body-md-2 fw-semibold text-secondary link"
             >
               {product.title}
