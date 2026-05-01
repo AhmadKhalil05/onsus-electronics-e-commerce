@@ -1,43 +1,58 @@
 import { apiRequest } from "./http";
 import { API_ROUTES } from "@/config/api";
 
-/**
- * @param {unknown} value
- * @returns {number}
- */
-function toFiniteId(value) {
-  const n = Number(value);
-  return Number.isFinite(n) ? Math.trunc(n) : NaN;
+function toStringId(value) {
+  if (value == null) return "";
+  const id = String(value).trim();
+  return id;
+}
+
+function tryParseJson(value) {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+}
+
+function unwrapApiBody(data) {
+  const first = tryParseJson(data);
+  if (first && typeof first === "object" && !Array.isArray(first)) {
+    const rec = /** @type {Record<string, unknown>} */ (first);
+    if ("body" in rec) return tryParseJson(rec.body);
+  }
+  return first;
 }
 
 /**
  * @param {unknown} data
- * @returns {number[]}
+ * @returns {string[]}
  */
 export function parseWishlistProductIds(data) {
-  if (data == null) return [];
-  if (Array.isArray(data)) {
-    return data
+  const unwrapped = unwrapApiBody(data);
+  if (unwrapped == null) return [];
+  if (Array.isArray(unwrapped)) {
+    return unwrapped
       .map((item) => {
-        if (typeof item === "number" && Number.isFinite(item)) return item;
-        if (typeof item === "string" && item.trim() !== "") {
-          return toFiniteId(item);
-        }
+        if (typeof item === "string" && item.trim() !== "") return item.trim();
+        if (typeof item === "number" && Number.isFinite(item)) return String(item);
         if (item && typeof item === "object") {
           const o = /** @type {Record<string, unknown>} */ (item);
-          const id = o.productId ?? o.product_id ?? o.id;
-          return toFiniteId(id);
+          return toStringId(o.productId ?? o.product_id ?? o.id);
         }
-        return NaN;
+        return "";
       })
-      .filter((n) => Number.isFinite(n));
+      .filter(Boolean);
   }
-  if (typeof data === "object") {
-    const o = /** @type {Record<string, unknown>} */ (data);
+  if (typeof unwrapped === "object") {
+    const o = /** @type {Record<string, unknown>} */ (unwrapped);
     const directId = o.productId ?? o.product_id ?? o.id;
     if (directId != null) {
-      const n = toFiniteId(directId);
-      return Number.isFinite(n) ? [n] : [];
+      const id = toStringId(directId);
+      return id ? [id] : [];
     }
     const nested = o.productIds ?? o.items ?? o.wishlist ?? o.data;
     if (nested !== undefined) return parseWishlistProductIds(nested);
@@ -50,25 +65,25 @@ export function parseWishlistProductIds(data) {
  */
 export async function fetchWishlist() {
   const data = await apiRequest("get", API_ROUTES.wishlist, {});
-  return parseWishlistProductIds(data);
+  return Array.from(new Set(parseWishlistProductIds(data)));
 }
 
 /**
- * PUT /wishlist with full list (matches Lambda design keyed by userId claim).
- * @param {number[]} productIds
+ * POST /wishlist with a single productId.
+ * @param {string | number} productId
  */
-export function replaceWishlist(productIds) {
-  const items = Array.from(
-    new Set((productIds || []).map((id) => toFiniteId(id)).filter(Number.isFinite))
-  );
-  return apiRequest("put", API_ROUTES.wishlist, {
-    data: { items },
+export function addWishlistItem(productId) {
+  return apiRequest("post", API_ROUTES.wishlist, {
+    data: { productId: String(productId) },
   });
 }
 
 /**
- * DELETE /wishlist (clears list for current user).
+ * DELETE /wishlist?productId=...
+ * @param {string | number} productId
  */
-export function clearWishlist() {
-  return apiRequest("delete", API_ROUTES.wishlist, {});
+export function removeWishlistItem(productId) {
+  return apiRequest("delete", API_ROUTES.wishlist, {
+    params: { productId: String(productId) },
+  });
 }

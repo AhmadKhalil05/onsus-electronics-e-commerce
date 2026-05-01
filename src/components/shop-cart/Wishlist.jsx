@@ -16,7 +16,7 @@ export default function Wishlist() {
   useEffect(() => {
     setItems([
       ...products.filter((elm) =>
-        wishList.some((w) => Number(w) === Number(elm.id))
+        wishList.some((w) => String(w) === String(elm.id))
       ),
     ]);
   }, [wishList, products]);
@@ -119,7 +119,7 @@ export default function Wishlist() {
               <Link
                 className="tf-btn mt-2 mb-3 text-white"
                 style={{ width: "fit-content" }}
-                href="/products"
+                to="/products"
               >
                 Explore Products
               </Link>
