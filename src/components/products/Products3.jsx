@@ -1,15 +1,16 @@
 import React, { useEffect, useReducer } from "react";
 import FilterOptions from "./FilterOptions";
-import { products3 } from "@/data/products";
+import { useCatalog } from "@/context/CatalogContext";
 
 import ShowLength from "./ShowLength";
-import { initialState, reducer } from "@/reducer/filterReducer";
+import { createInitialState, reducer } from "@/reducer/filterReducer";
 import LayoutHandler from "./LayoutHandler";
 import ProductCards3 from "../productCards/ProductCards3";
 import FilterSidebar from "./FilterSidebar";
 
 export default function Products3() {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const { products } = useCatalog();
+  const [state, dispatch] = useReducer(reducer, products, createInitialState);
   const {
     price,
     isNew,
@@ -71,16 +72,21 @@ export default function Products3() {
   };
 
   useEffect(() => {
+    dispatch({ type: "FULL_RESET", payload: products });
+  }, [products]);
+
+  useEffect(() => {
+    const sourceProducts = Array.isArray(products) ? products : [];
     let filteredArrays = [];
 
     if (brands.length) {
-      const filteredByBrands = [...products3].filter((elm) =>
+      const filteredByBrands = [...sourceProducts].filter((elm) =>
         brands.some((el) => elm.filterBrands.includes(el))
       );
       filteredArrays = [...filteredArrays, filteredByBrands];
     }
     if (isNew !== "All") {
-      const filteredByisNew = [...products3].filter((elm) => {
+      const filteredByisNew = [...sourceProducts].filter((elm) => {
         if (isNew) {
           return elm.inNew;
         } else {
@@ -91,33 +97,33 @@ export default function Products3() {
     }
     if (deals !== "All") {
       if (deals == "All Discounts") {
-        const filteredBydeails = [...products3].filter((elm) => elm.oldPrice);
+        const filteredBydeails = [...sourceProducts].filter((elm) => elm.oldPrice);
         filteredArrays = [...filteredArrays, filteredBydeails];
       }
       if (deals == "Today’s Deals") {
-        const filteredBydeails = [...products3].filter(
+        const filteredBydeails = [...sourceProducts].filter(
           (elm) => elm.isTodaysDeals
         );
         filteredArrays = [...filteredArrays, filteredBydeails];
       }
     }
     if (rating !== "All") {
-      const filteredByrating = [...products3].filter(
+      const filteredByrating = [...sourceProducts].filter(
         (elm) => elm.rating >= rating
       );
       filteredArrays = [...filteredArrays, filteredByrating];
     }
 
-    const filteredByPrice = [...products3].filter(
+    const filteredByPrice = [...sourceProducts].filter(
       (elm) => elm.price >= price[0] && elm.price <= price[1]
     );
     filteredArrays = [...filteredArrays, filteredByPrice];
 
-    const commonItems = [...products3].filter((item) =>
+    const commonItems = [...sourceProducts].filter((item) =>
       filteredArrays.every((array) => array.includes(item))
     );
     dispatch({ type: "SET_FILTERED", payload: commonItems });
-  }, [price, isNew, deals, rating, brands]);
+  }, [products, price, isNew, deals, rating, brands]);
 
   useEffect(() => {
     if (sortingOption === "Price Ascending") {

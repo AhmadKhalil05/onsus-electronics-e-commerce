@@ -3,8 +3,7 @@ import { useCatalog } from "@/context/CatalogContext";
 
 export default function AddToQuickview({ productId, tooltipClass = "" }) {
   const { getProductById, products } = useCatalog();
-  const product =
-    getProductById(productId) || products[0];
+  const product = getProductById(productId) || null;
   const { setQuickViewItem } = useContextElement();
   if (!product?.id) return null;
   return (
