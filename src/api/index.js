@@ -11,8 +11,8 @@ export {
   updateProductApi,
 } from "./products";
 export {
-  clearWishlist,
+  addWishlistItem,
   fetchWishlist,
   parseWishlistProductIds,
-  replaceWishlist,
+  removeWishlistItem,
 } from "./wishlist";
