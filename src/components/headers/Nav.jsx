@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useUserAuth } from "@/context/UserAuthContext";
 
 const links = [
   { to: "/", label: "Home" },
@@ -13,9 +14,13 @@ const links = [
 
 export default function Nav() {
   const { pathname } = useLocation();
+  const { isAuthenticated, logout } = useUserAuth();
+  const visibleLinks = links.filter(({ to }) =>
+    isAuthenticated ? to !== "/login" && to !== "/register" : true
+  );
   return (
     <>
-      {links.map(({ to, label }) => (
+      {visibleLinks.map(({ to, label }) => (
         <li
           key={to}
           className={`nav-item ${pathname === to ? "active" : ""}`}
@@ -25,6 +30,17 @@ export default function Nav() {
           </Link>
         </li>
       ))}
+      {isAuthenticated && (
+        <li className="nav-item">
+          <button
+            type="button"
+            className="item-link body-md-2 fw-semibold link bg-transparent border-0 p-0"
+            onClick={logout}
+          >
+            <span>Logout</span>
+          </button>
+        </li>
+      )}
     </>
   );
 }

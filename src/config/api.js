@@ -3,6 +3,7 @@ const DEFAULT_BASE =
 const DEFAULT_NEWSLETTER_ENDPOINT = "/newsletter/subscribe";
 const DEFAULT_CONTACT_ENDPOINT = "/contact";
 const DEFAULT_PRODUCTS_ENDPOINT = "/products";
+const DEFAULT_ADMIN_PRODUCTS_ENDPOINT = "/admin";
 const DEFAULT_WISHLIST_ENDPOINT = "/wishlist";
 const DEFAULT_PROFILE_ENDPOINT = "/profile";
 const DEFAULT_CART_ENDPOINT = "/cart";
@@ -24,6 +25,9 @@ export const NEWSLETTER_BASE_URL = trimTrailingSlash(
 /** API paths used by frontend services. */
 export const API_ROUTES = {
   products: import.meta.env.VITE_PRODUCTS_ENDPOINT || DEFAULT_PRODUCTS_ENDPOINT,
+  adminProducts:
+    import.meta.env.VITE_ADMIN_PRODUCTS_ENDPOINT ||
+    DEFAULT_ADMIN_PRODUCTS_ENDPOINT,
   wishlist: import.meta.env.VITE_WISHLIST_ENDPOINT || DEFAULT_WISHLIST_ENDPOINT,
   contact: import.meta.env.VITE_CONTACT_ENDPOINT || DEFAULT_CONTACT_ENDPOINT,
   profile: import.meta.env.VITE_PROFILE_ENDPOINT || DEFAULT_PROFILE_ENDPOINT,

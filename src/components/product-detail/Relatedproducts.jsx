@@ -115,9 +115,11 @@ export default function Relatedproducts({ excludeId }) {
                       <span className="new-price price-text fw-medium mb-0">
                         ${product.price.toFixed(3)}
                       </span>
-                      <span className="old-price body-md-2 text-main-2 fw-normal">
-                        ${product.oldPrice.toFixed(3)}
-                      </span>
+                      {product.oldPrice != null && (
+                        <span className="old-price body-md-2 text-main-2 fw-normal">
+                          ${product.oldPrice.toFixed(3)}
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
