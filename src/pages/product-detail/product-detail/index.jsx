@@ -16,12 +16,17 @@ const metadata = {
   description: "Onsus - Multipurpose Reactjs eCommerce Template",
 };
 export default function ProductDetailPage() {
-  let params = useParams();
-  const id = params.id;
+  const params = useParams();
+  const rawId = params.id || "";
+  let decodedId = rawId;
+  try {
+    decodedId = decodeURIComponent(rawId);
+  } catch {
+    decodedId = rawId;
+  }
   const { products, getProductById } = useCatalog();
 
-  const resolved = getProductById(id);
-  const product = resolved || products[0];
+  const product = getProductById(decodedId) || getProductById(rawId) || null;
 
   if (!product?.id) {
     return (
@@ -30,9 +35,9 @@ export default function ProductDetailPage() {
         <Header4 />
         <div className="container tf-sp-3">
           <p className="body-md-2">
-            No products in catalog.{" "}
+            Product not found.{" "}
             <Link to="/products" className="link text-primary">
-              Go to products
+              Back to products
             </Link>
           </p>
         </div>

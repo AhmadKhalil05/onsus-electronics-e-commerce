@@ -55,12 +55,16 @@ export default function SimilerProducts({ excludeId }) {
           }}
           spaceBetween={15}
         >
-          {list.map((product) => (
+          {list.map((product) => {
+            const productPath = `/product-detail/${encodeURIComponent(
+              String(product.id)
+            )}`;
+            return (
             <SwiperSlide className="swiper-slide" key={product.id}>
               <div className="card-product">
                 <div className="card-product-wrapper">
                   <Link
-                    to={`/product-detail/${product.id}`}
+                    to={productPath}
                     className="product-img"
                   >
                     <img
@@ -106,7 +110,7 @@ export default function SimilerProducts({ excludeId }) {
                         {product.category}
                       </p>
                       <Link
-                        to={`/product-detail/${product.id}`}
+                        to={productPath}
                         className="name-product body-md-2 fw-semibold text-secondary link"
                       >
                         {product.title}
@@ -114,17 +118,20 @@ export default function SimilerProducts({ excludeId }) {
                     </div>
                     <p className="price-wrap fw-medium">
                       <span className="new-price price-text fw-medium mb-0">
-                        ${product.price.toFixed(3)}
+                        ${Number(product.price || 0).toFixed(3)}
                       </span>
-                      <span className="old-price body-md-2 text-main-2 fw-normal">
-                        ${product.oldPrice.toFixed(3)}
-                      </span>
+                      {product.oldPrice != null && (
+                        <span className="old-price body-md-2 text-main-2 fw-normal">
+                          ${Number(product.oldPrice).toFixed(3)}
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
               </div>
             </SwiperSlide>
-          ))}
+            );
+          })}
           <div className="d-flex d-lg-none sw-dot-default sw-pagination-products justify-content-center spd68" />
         </Swiper>
       </div>
