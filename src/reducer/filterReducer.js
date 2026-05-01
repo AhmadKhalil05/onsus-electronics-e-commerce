@@ -1,7 +1,11 @@
 export function createInitialState(catalog) {
   const list = Array.isArray(catalog) ? [...catalog] : [];
+  const maxPrice =
+    list.length > 0
+      ? Math.max(...list.map((p) => Number(p?.price) || 0), 1200)
+      : 1200;
   return {
-    price: [0, 1200],
+    price: [0, maxPrice],
     isNew: "All",
     deals: "All",
     rating: "All",
@@ -43,9 +47,13 @@ export function reducer(state, action) {
     case "SET_ITEM_PER_PAGE":
       return { ...state, itemPerPage: action.payload };
     case "CLEAR_FILTER":
+      const resetMaxPrice =
+        state.sorted.length > 0
+          ? Math.max(...state.sorted.map((p) => Number(p?.price) || 0), 1200)
+          : 1200;
       return {
         ...state,
-        price: [0, 1200],
+        price: [0, resetMaxPrice],
         isNew: "All",
         deals: "All",
         rating: "All",
