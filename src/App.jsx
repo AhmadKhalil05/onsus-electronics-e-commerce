@@ -33,6 +33,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProductsPage from "./pages/admin/AdminProductsPage";
+import AdminContactsPage from "./pages/admin/AdminContactsPage";
 
 function StorefrontShell() {
   return (
@@ -153,6 +154,7 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="products" element={<AdminProductsPage />} />
+              <Route path="contacts" element={<AdminContactsPage />} />
             </Route>
           </Route>
 
