@@ -5,17 +5,53 @@ import {
   parseCreatedProductId,
   updateProductApi,
 } from "@/api/products";
+import { getUploadUrl, uploadFileToPresignedUrl } from "@/api/upload";
 import { requireIdTokenOrRedirect } from "@/auth/session";
 import { useCatalog } from "@/context/CatalogContext";
 import { brands } from "@/data/filterOptions";
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function draftToApiPayload(draft) {
-  const thumbImages = String(draft.thumbImagesStr || "")
+function parseThumbImages(value) {
+  return String(value || "")
     .split(/[,\n]+/)
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+async function uploadOneImage(file, idToken) {
+  const data = await getUploadUrl({
+    idToken,
+    contentType: file.type,
+    fileName: file.name,
+  });
+  const uploadUrl = String(data?.uploadUrl || "");
+  const fileUrl = String(data?.fileUrl || "");
+  if (!uploadUrl || !fileUrl) {
+    throw new Error("Upload service did not return uploadUrl/fileUrl");
+  }
+  await uploadFileToPresignedUrl(uploadUrl, file);
+  return fileUrl;
+}
+
+async function resolveDraftImages(draft, imageFiles, idToken) {
+  const fallbackGallery = parseThumbImages(draft.thumbImagesStr);
+  const imgSrc = imageFiles.main
+    ? await uploadOneImage(imageFiles.main, idToken)
+    : draft.imgSrc;
+  const imgHover = imageFiles.hover
+    ? await uploadOneImage(imageFiles.hover, idToken)
+    : draft.imgHover || undefined;
+  const thumbImages =
+    imageFiles.gallery.length > 0
+      ? await Promise.all(imageFiles.gallery.map((f) => uploadOneImage(f, idToken)))
+      : fallbackGallery;
+
+  return { imgSrc, imgHover, thumbImages };
+}
+
+function draftToApiPayload(draft) {
+  const thumbImages = parseThumbImages(draft.thumbImagesStr);
   return {
     title: draft.title,
     category: draft.category,
@@ -73,8 +109,8 @@ const emptyDraft = () => ({
   category: "Audio",
   price: "99",
   oldPrice: "",
-  imgSrc: "/images/store/p1.jpg",
-  imgHover: "/images/store/p1b.jpg",
+  imgSrc: "",
+  imgHover: "",
   thumbImagesStr: "",
   filterBrands: [],
   inNew: true,
@@ -100,6 +136,11 @@ export default function AdminProductsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(emptyDraft);
+  const [imageFiles, setImageFiles] = useState({
+    main: null,
+    hover: null,
+    gallery: [],
+  });
   const [saving, setSaving] = useState(false);
 
   const filtered = useMemo(() => {
@@ -116,18 +157,21 @@ export default function AdminProductsPage() {
   const openCreate = () => {
     setEditingId(null);
     setDraft(emptyDraft());
+    setImageFiles({ main: null, hover: null, gallery: [] });
     setModalOpen(true);
   };
 
   const openEdit = (p) => {
     setEditingId(p.id);
     setDraft(productToDraft(p));
+    setImageFiles({ main: null, hover: null, gallery: [] });
     setModalOpen(true);
   };
 
   const closeModal = () => {
     setModalOpen(false);
     setEditingId(null);
+    setImageFiles({ main: null, hover: null, gallery: [] });
   };
 
   const toggleBrand = (id) => {
@@ -149,33 +193,39 @@ export default function AdminProductsPage() {
       return;
     }
 
-    const thumbImages = String(draft.thumbImagesStr || "")
-      .split(/[,\n]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const raw = {
-      title: draft.title,
-      category: draft.category,
-      price: draft.price,
-      oldPrice: draft.oldPrice === "" ? null : draft.oldPrice,
-      imgSrc: draft.imgSrc,
-      imgHover: draft.imgHover || undefined,
-      thumbImages,
-      filterBrands: draft.filterBrands,
-      inNew: draft.inNew,
-      isTodaysDeals: draft.isTodaysDeals,
-      rating: draft.rating,
-      sold: draft.sold,
-      available: draft.available,
-      progressWidth: draft.progressWidth,
-      countdownTimer: draft.countdownTimer,
-      salePercentage:
-        draft.salePercentage === "" ? null : draft.salePercentage,
-    };
-
-    const apiPayload = draftToApiPayload(draft);
     setSaving(true);
     try {
+      const { imgSrc, imgHover, thumbImages } = await resolveDraftImages(
+        draft,
+        imageFiles,
+        idToken
+      );
+      const raw = {
+        title: draft.title,
+        category: draft.category,
+        price: draft.price,
+        oldPrice: draft.oldPrice === "" ? null : draft.oldPrice,
+        imgSrc,
+        imgHover,
+        thumbImages,
+        filterBrands: draft.filterBrands,
+        inNew: draft.inNew,
+        isTodaysDeals: draft.isTodaysDeals,
+        rating: draft.rating,
+        sold: draft.sold,
+        available: draft.available,
+        progressWidth: draft.progressWidth,
+        countdownTimer: draft.countdownTimer,
+        salePercentage:
+          draft.salePercentage === "" ? null : draft.salePercentage,
+      };
+      const apiPayload = draftToApiPayload({
+        ...draft,
+        imgSrc,
+        imgHover,
+        thumbImagesStr: thumbImages.join("\n"),
+      });
+
       if (editingId != null) {
         await updateProductApi(editingId, apiPayload, idToken);
         updateProduct(editingId, raw);
@@ -394,42 +444,65 @@ export default function AdminProductsPage() {
                 </div>
                 <div className="col-md-6">
                   <label className="form-label small fw-semibold">
-                    Main image URL
+                    Main image
                   </label>
                   <input
                     className="form-control"
-                    required
-                    value={draft.imgSrc}
+                    type="file"
+                    accept="image/*"
+                    required={editingId == null && !draft.imgSrc}
                     onChange={(e) =>
-                      setDraft({ ...draft, imgSrc: e.target.value })
+                      setImageFiles({
+                        ...imageFiles,
+                        main: e.target.files?.[0] || null,
+                      })
                     }
                   />
+                  {imageFiles.main?.name && (
+                    <div className="form-text">Selected: {imageFiles.main.name}</div>
+                  )}
                 </div>
                 <div className="col-md-6">
                   <label className="form-label small fw-semibold">
-                    Hover image URL
+                    Hover image
                   </label>
                   <input
                     className="form-control"
-                    value={draft.imgHover}
+                    type="file"
+                    accept="image/*"
                     onChange={(e) =>
-                      setDraft({ ...draft, imgHover: e.target.value })
+                      setImageFiles({
+                        ...imageFiles,
+                        hover: e.target.files?.[0] || null,
+                      })
                     }
                   />
+                  {imageFiles.hover?.name && (
+                    <div className="form-text">Selected: {imageFiles.hover.name}</div>
+                  )}
                 </div>
                 <div className="col-12">
                   <label className="form-label small fw-semibold">
-                    Gallery URLs (one per line, min 4 padded automatically)
+                    Gallery images (multiple files, min 4 padded automatically)
                   </label>
-                  <textarea
-                    className="form-control font-monospace small"
-                    rows={4}
-                    value={draft.thumbImagesStr}
+                  <input
+                    className="form-control"
+                    type="file"
+                    accept="image/*"
+                    multiple
                     onChange={(e) =>
-                      setDraft({ ...draft, thumbImagesStr: e.target.value })
+                      setImageFiles({
+                        ...imageFiles,
+                        gallery: Array.from(e.target.files || []),
+                      })
                     }
-                    placeholder="/images/store/p1.jpg&#10;/images/store/p1b.jpg"
                   />
+                  {imageFiles.gallery.length > 0 && (
+                    <div className="form-text">
+                      Selected {imageFiles.gallery.length} gallery file
+                      {imageFiles.gallery.length > 1 ? "s" : ""}.
+                    </div>
+                  )}
                 </div>
                 <div className="col-12">
                   <label className="form-label small fw-semibold d-block mb-2">
