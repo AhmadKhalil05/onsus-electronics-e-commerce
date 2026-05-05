@@ -16,3 +16,4 @@ export {
   parseWishlistProductIds,
   removeWishlistItem,
 } from "./wishlist";
+export { getUploadUrl, uploadFileToPresignedUrl } from "./upload";
