@@ -319,7 +319,7 @@ export default function AdminProductsPage() {
                   <td className="text-muted">{p.id}</td>
                   <td>
                     <img
-                      src={p.imgSrc}
+                      src={p.imgSrc || "/images/store/p1.jpg"}
                       alt=""
                       width={40}
                       height={40}
