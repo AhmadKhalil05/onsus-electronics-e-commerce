@@ -29,6 +29,9 @@ export default function AdminLayout() {
           <NavLink to="/admin/products" className={linkClass}>
             Products (CRUD)
           </NavLink>
+          <NavLink to="/admin/contacts" className={linkClass}>
+            Messages
+          </NavLink>
           <Link
             to="/"
             className="nav-link text-white-50 rounded px-3 py-2"
