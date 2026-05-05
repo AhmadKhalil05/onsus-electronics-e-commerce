@@ -7,6 +7,7 @@ const DEFAULT_ADMIN_PRODUCTS_ENDPOINT = "/admin";
 const DEFAULT_WISHLIST_ENDPOINT = "/wishlist";
 const DEFAULT_PROFILE_ENDPOINT = "/profile";
 const DEFAULT_CART_ENDPOINT = "/cart";
+const DEFAULT_UPLOAD_ENDPOINT = "/upload";
 
 function trimTrailingSlash(url) {
   return String(url).replace(/\/+$/, "");
@@ -32,6 +33,7 @@ export const API_ROUTES = {
   contact: import.meta.env.VITE_CONTACT_ENDPOINT || DEFAULT_CONTACT_ENDPOINT,
   profile: import.meta.env.VITE_PROFILE_ENDPOINT || DEFAULT_PROFILE_ENDPOINT,
   cart: import.meta.env.VITE_CART_ENDPOINT || DEFAULT_CART_ENDPOINT,
+  upload: import.meta.env.VITE_UPLOAD_ENDPOINT || DEFAULT_UPLOAD_ENDPOINT,
   newsletter:
     import.meta.env.VITE_NEWSLETTER_ENDPOINT || DEFAULT_NEWSLETTER_ENDPOINT,
 };
