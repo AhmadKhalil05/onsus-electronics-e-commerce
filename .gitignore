@@ -1,3 +1,17 @@
+# Build artifacts
+dist
+dist-ssr
+build
+*.local
+
+# Dependencies
+node_modules/
+
+# Secrets & Environment
+.env
+.env.*
+!.env.example
+
 # Logs
 logs
 *.log
@@ -7,22 +21,23 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
 # Editor directories and files
-.vscode/*
+.vscode/
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-.env.local
-.env
-.env.*
-!.env.example
+
+# Testing
+coverage/
+
+# Tooling
+.eslintcache
+vite.config.js.timestamp-*
+.vercel
+.antigravity/
