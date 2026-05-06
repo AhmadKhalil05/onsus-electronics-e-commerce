@@ -68,30 +68,15 @@ export async function getUploadUrl(options = {}) {
  * @param {File} file
  */
 export async function uploadFileToPresignedUrl(uploadUrl, file) {
-  const first = await fetch(uploadUrl, {
-    method: "PUT",
-    headers: {
-      "Content-Type": file.type || "application/octet-stream",
-    },
-    body: file,
-  });
-  if (first.ok) return;
-
-  const firstBody = await first.text();
-  const isSignatureMismatch =
-    first.status === 403 && /SignatureDoesNotMatch/i.test(firstBody);
-  if (!isSignatureMismatch) {
-    throw new Error(firstBody || `Upload failed with status ${first.status}`);
-  }
-
-  // Retry once without Content-Type. fetch will not auto-inject
-  // application/x-www-form-urlencoded for File/Blob payloads.
-  const second = await fetch(uploadUrl, {
+  // We send the file directly without headers to avoid signature mismatch.
+  const res = await fetch(uploadUrl, {
     method: "PUT",
     body: file,
   });
-  if (!second.ok) {
-    const secondBody = await second.text();
-    throw new Error(secondBody || `Upload failed with status ${second.status}`);
+
+  if (!res.ok) {
+    const body = await res.text();
+    console.error("S3 Upload Failed", { status: res.status, body });
+    throw new Error(body || `S3 upload failed (Status ${res.status})`);
   }
 }
