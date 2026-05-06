@@ -57,6 +57,9 @@ export function normalizeProduct(raw) {
 
   const brands = Array.isArray(raw.filterBrands) ? raw.filterBrands : [];
 
+  const resolvedTitle = String(raw.title || raw.name || "Product");
+  const resolvedDescription = String(raw.description || "");
+
   return {
     id: resolvedId,
     productId: resolvedId,
@@ -66,7 +69,9 @@ export function normalizeProduct(raw) {
     width: Number(raw.width) || 450,
     height: Number(raw.height) || 390,
     category: String(raw.category || "Electronics"),
-    title: String(raw.title || "Product"),
+    title: resolvedTitle,
+    name: resolvedTitle,
+    description: resolvedDescription,
     price: safePrice,
     oldPrice: safeOld,
     saveAmount,
@@ -97,13 +102,14 @@ export function CatalogProvider({ children }) {
     if (authLoading) return;
     let cancelled = false;
     fetchProducts()
-      .then((rawList) => {
+      .then((result) => {
         if (cancelled) return;
+        const rawList = Array.isArray(result?.items) ? result.items : [];
         if (!Array.isArray(rawList)) {
           showApiError(
             "Load products",
             new Error(
-              "The server returned an unexpected shape (expected a JSON array of products)."
+              "The server returned an unexpected shape (expected products list in items[])."
             )
           );
           return;
