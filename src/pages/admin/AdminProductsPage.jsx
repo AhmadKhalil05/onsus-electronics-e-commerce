@@ -9,7 +9,7 @@ import { getUploadUrl, uploadFileToPresignedUrl } from "@/api/upload";
 import { requireIdTokenOrRedirect } from "@/auth/session";
 import { useCatalog } from "@/context/CatalogContext";
 import { brands } from "@/data/filterOptions";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function parseThumbImages(value) {
@@ -142,6 +142,10 @@ export default function AdminProductsPage() {
     gallery: [],
   });
   const [saving, setSaving] = useState(false);
+  const [mainPreview, setMainPreview] = useState("");
+  const [hoverPreview, setHoverPreview] = useState("");
+  const [galleryPreviews, setGalleryPreviews] = useState([]);
+  const [lastPasteInfo, setLastPasteInfo] = useState("");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -185,6 +189,10 @@ export default function AdminProductsPage() {
 
   const save = async (e) => {
     e.preventDefault();
+    if (!imageFiles.main && !draft.imgSrc) {
+      showApiError("Save product", new Error("Main image is required."));
+      return;
+    }
     const idToken = await requireIdTokenOrRedirect({
       navigate,
       nextPath: "/admin/products",
@@ -244,6 +252,98 @@ export default function AdminProductsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  useEffect(() => {
+    if (imageFiles.main) {
+      const objectUrl = URL.createObjectURL(imageFiles.main);
+      setMainPreview(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    }
+    setMainPreview(draft.imgSrc || "");
+  }, [imageFiles.main, draft.imgSrc]);
+
+  useEffect(() => {
+    if (imageFiles.hover) {
+      const objectUrl = URL.createObjectURL(imageFiles.hover);
+      setHoverPreview(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    }
+    setHoverPreview(draft.imgHover || "");
+  }, [imageFiles.hover, draft.imgHover]);
+
+  useEffect(() => {
+    if (imageFiles.gallery.length > 0) {
+      const objectUrls = imageFiles.gallery.map((f) => URL.createObjectURL(f));
+      setGalleryPreviews(objectUrls);
+      return () => objectUrls.forEach((u) => URL.revokeObjectURL(u));
+    }
+    setGalleryPreviews(parseThumbImages(draft.thumbImagesStr));
+  }, [imageFiles.gallery, draft.thumbImagesStr]);
+
+  const getClipboardImageFiles = (e) => {
+    const clipboardItems = Array.from(e.clipboardData?.items || []);
+    const pastedImages = clipboardItems
+      .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+      .map((item) => item.getAsFile())
+      .filter(Boolean);
+    return pastedImages.map((file, index) => {
+      if (file.name) return file;
+      const ext = file.type.split("/")[1] || "png";
+      return new File([file], `pasted-${Date.now()}-${index + 1}.${ext}`, {
+        type: file.type || "image/png",
+      });
+    });
+  };
+
+  const handlePasteImages = (e) => {
+    const pastedImages = getClipboardImageFiles(e);
+
+    if (pastedImages.length === 0) return;
+    e.preventDefault();
+
+    setImageFiles((prev) => {
+      let nextMain = prev.main;
+      let nextHover = prev.hover;
+      const nextGallery = [...prev.gallery];
+
+      for (const file of pastedImages) {
+        if (!nextMain) nextMain = file;
+        else if (!nextHover) nextHover = file;
+        else nextGallery.push(file);
+      }
+
+      return { main: nextMain, hover: nextHover, gallery: nextGallery };
+    });
+    setLastPasteInfo(
+      `Pasted ${pastedImages.length} image${pastedImages.length > 1 ? "s" : ""} from clipboard.`
+    );
+  };
+
+  const handlePasteMain = (e) => {
+    const pastedImages = getClipboardImageFiles(e);
+    if (pastedImages.length === 0) return;
+    e.preventDefault();
+    setImageFiles((prev) => ({ ...prev, main: pastedImages[0] }));
+    setLastPasteInfo("Main image pasted from clipboard.");
+  };
+
+  const handlePasteHover = (e) => {
+    const pastedImages = getClipboardImageFiles(e);
+    if (pastedImages.length === 0) return;
+    e.preventDefault();
+    setImageFiles((prev) => ({ ...prev, hover: pastedImages[0] }));
+    setLastPasteInfo("Hover image pasted from clipboard.");
+  };
+
+  const handlePasteGallery = (e) => {
+    const pastedImages = getClipboardImageFiles(e);
+    if (pastedImages.length === 0) return;
+    e.preventDefault();
+    setImageFiles((prev) => ({ ...prev, gallery: [...prev.gallery, ...pastedImages] }));
+    setLastPasteInfo(
+      `Added ${pastedImages.length} image${pastedImages.length > 1 ? "s" : ""} to gallery from clipboard.`
+    );
   };
 
   const confirmDelete = async (p) => {
@@ -390,6 +490,20 @@ export default function AdminProductsPage() {
             <form onSubmit={save} className="p-4">
               <div className="row g-3">
                 <div className="col-12">
+                  <div className="alert alert-light border small mb-0 py-2">
+                    Paste images with <kbd>Ctrl</kbd> + <kbd>V</kbd> into any
+                    paste box below (or use auto-paste).
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary ms-2"
+                      onPaste={handlePasteImages}
+                    >
+                      Auto-paste
+                    </button>
+                    {lastPasteInfo ? <span className="ms-2">{lastPasteInfo}</span> : null}
+                  </div>
+                </div>
+                <div className="col-12">
                   <label className="form-label small fw-semibold">Title</label>
                   <input
                     className="form-control"
@@ -450,7 +564,6 @@ export default function AdminProductsPage() {
                     className="form-control"
                     type="file"
                     accept="image/*"
-                    required={editingId == null && !draft.imgSrc}
                     onChange={(e) =>
                       setImageFiles({
                         ...imageFiles,
@@ -460,6 +573,24 @@ export default function AdminProductsPage() {
                   />
                   {imageFiles.main?.name && (
                     <div className="form-text">Selected: {imageFiles.main.name}</div>
+                  )}
+                  <input
+                    className="form-control mt-2"
+                    type="text"
+                    readOnly
+                    value=""
+                    placeholder="Click here then Ctrl+V to paste main image"
+                    onPaste={handlePasteMain}
+                  />
+                  {mainPreview && (
+                    <div className="mt-2">
+                      <img
+                        src={mainPreview}
+                        alt="Main preview"
+                        className="rounded border"
+                        style={{ width: 96, height: 96, objectFit: "cover" }}
+                      />
+                    </div>
                   )}
                 </div>
                 <div className="col-md-6">
@@ -480,10 +611,28 @@ export default function AdminProductsPage() {
                   {imageFiles.hover?.name && (
                     <div className="form-text">Selected: {imageFiles.hover.name}</div>
                   )}
+                  <input
+                    className="form-control mt-2"
+                    type="text"
+                    readOnly
+                    value=""
+                    placeholder="Click here then Ctrl+V to paste hover image"
+                    onPaste={handlePasteHover}
+                  />
+                  {hoverPreview && (
+                    <div className="mt-2">
+                      <img
+                        src={hoverPreview}
+                        alt="Hover preview"
+                        className="rounded border"
+                        style={{ width: 96, height: 96, objectFit: "cover" }}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="col-12">
                   <label className="form-label small fw-semibold">
-                    Gallery images (multiple files, min 4 padded automatically)
+                    Gallery images (multiple files)
                   </label>
                   <input
                     className="form-control"
@@ -501,6 +650,27 @@ export default function AdminProductsPage() {
                     <div className="form-text">
                       Selected {imageFiles.gallery.length} gallery file
                       {imageFiles.gallery.length > 1 ? "s" : ""}.
+                    </div>
+                  )}
+                  <input
+                    className="form-control mt-2"
+                    type="text"
+                    readOnly
+                    value=""
+                    placeholder="Click here then Ctrl+V to add image(s) to gallery"
+                    onPaste={handlePasteGallery}
+                  />
+                  {galleryPreviews.length > 0 && (
+                    <div className="d-flex flex-wrap gap-2 mt-2">
+                      {galleryPreviews.map((src, idx) => (
+                        <img
+                          key={`${src}-${idx}`}
+                          src={src}
+                          alt={`Gallery preview ${idx + 1}`}
+                          className="rounded border"
+                          style={{ width: 72, height: 72, objectFit: "cover" }}
+                        />
+                      ))}
                     </div>
                   )}
                 </div>

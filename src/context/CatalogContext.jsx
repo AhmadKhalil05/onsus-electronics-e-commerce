@@ -39,9 +39,6 @@ export function normalizeProduct(raw) {
           .filter(Boolean)
       : [imgSrc];
   if (!thumbs.length) thumbs = [imgSrc];
-  while (thumbs.length < 4) {
-    thumbs.push(thumbs[thumbs.length - 1]);
-  }
 
   const price = Number(raw.price);
   const safePrice = Number.isFinite(price) ? price : 0;
