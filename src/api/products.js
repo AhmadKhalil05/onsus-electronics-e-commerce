@@ -24,29 +24,66 @@ function unwrapApiBody(data) {
 }
 
 /**
- * Normalizes common API envelope shapes to a plain array of product records.
+ * Normalizes list responses to a stable envelope for the UI.
+ * @param {unknown} data
+ * @returns {{ items: object[]; nextPageToken: string | null }}
+ */
+export function parseProductsEnvelope(data) {
+  const unwrapped = unwrapApiBody(data);
+  if (Array.isArray(unwrapped)) {
+    return { items: unwrapped, nextPageToken: null };
+  }
+  if (unwrapped && typeof unwrapped === "object") {
+    const o = /** @type {Record<string, unknown>} */ (unwrapped);
+    const token =
+      typeof o.nextPageToken === "string" && o.nextPageToken.trim()
+        ? o.nextPageToken
+        : null;
+    if (Array.isArray(o.items)) return { items: o.items, nextPageToken: token };
+    if (Array.isArray(o.products)) return { items: o.products, nextPageToken: token };
+    if (Array.isArray(o.data)) return { items: o.data, nextPageToken: token };
+  }
+  return { items: [], nextPageToken: null };
+}
+
+/**
+ * Backward-compatible parser kept for callers expecting a plain list.
  * @param {unknown} data
  * @returns {object[]}
  */
 export function parseProductsResponse(data) {
-  const unwrapped = unwrapApiBody(data);
-  if (Array.isArray(unwrapped)) return unwrapped;
-  if (unwrapped && typeof unwrapped === "object") {
-    const o = /** @type {Record<string, unknown>} */ (unwrapped);
-    if (Array.isArray(o.items)) return o.items;
-    if (Array.isArray(o.products)) return o.products;
-    if (Array.isArray(o.data)) return o.data;
-  }
-  return [];
+  return parseProductsEnvelope(data).items;
 }
 
 /**
- * GET /admin/products — Bearer ID token attached via axios interceptor when signed in.
+ * GET /products with optional Lambda query params:
+ *   - limit
+ *   - category
+ *   - search
+ *   - nextPageToken
+ * Returns a normalized envelope: { items, nextPageToken }.
  */
-export async function fetchProducts() {
+export async function fetchProducts(options = {}) {
+  const params = {};
+  if (options.limit != null && options.limit !== "") {
+    params.limit = String(options.limit);
+  }
+  if (typeof options.category === "string" && options.category.trim()) {
+    params.category = options.category.trim();
+  }
+  if (typeof options.search === "string" && options.search.trim()) {
+    params.search = options.search.trim();
+  }
+  if (
+    typeof options.nextPageToken === "string" &&
+    options.nextPageToken.trim()
+  ) {
+    params.nextPageToken = options.nextPageToken.trim();
+  }
+
   try {
-    const data = await apiRequest("get", API_ROUTES.products, {});
-    return parseProductsResponse(data);
+    const data = await apiRequest("get", API_ROUTES.products, { params });
+    return parseProductsEnvelope(data);
   } catch (err) {
     const status =
       err && typeof err === "object" && "response" in err
@@ -54,7 +91,7 @@ export async function fetchProducts() {
         : undefined;
     if (status === 401 || status === 403 || status === 404) {
       const fallback = await apiRequest("get", API_ROUTES.adminProducts, {});
-      return parseProductsResponse(fallback);
+      return parseProductsEnvelope(fallback);
     }
     throw err;
   }

@@ -1,25 +1,24 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 const categories = [
   { rel: "", label: "All categories" },
-  { rel: "apple-products", label: "Apple products" },
-  { rel: "audio-equipments", label: "Audio Equipments" },
-  { rel: "camera-video", label: "Camera & Video" },
-  { rel: "game-room-furniture", label: "Game & Room Furniture" },
-  { rel: "gaming-accessories", label: "Gaming Accessories" },
-  { rel: "headphone", label: "Headphone" },
-  { rel: "laptop-tablet", label: "Laptop & Tablet" },
-  { rel: "server-workstation", label: "Server & Workstation" },
-  { rel: "smartphone", label: "Smartphone" },
-  { rel: "smartwatch", label: "Smartwatch" },
-  { rel: "storage-digital-devices", label: "Storage & Digital Devices" },
-  { rel: "tv-computer-screen", label: "TV & Computer Screen" },
+  { rel: "Audio", label: "Audio" },
+  { rel: "Mobile", label: "Mobile" },
+  { rel: "Computers", label: "Computers" },
+  { rel: "Wearables", label: "Wearables" },
+  { rel: "Gaming", label: "Gaming" },
+  { rel: "Cameras", label: "Cameras" },
+  { rel: "Accessories", label: "Accessories" },
+  { rel: "Electronics", label: "Electronics" },
 ];
 
 export default function SearchForm({
   parentClass = "form-search-product style-2",
 }) {
+  const navigate = useNavigate();
   const [activeDropdown, setActiveDropdown] = useState(false);
-  const [activeCategory, setActiveCategory] = useState("All categories");
+  const [activeCategory, setActiveCategory] = useState(categories[0]);
+  const [searchText, setSearchText] = useState("");
   const navRef = useRef(null);
   // Close when clicking outside
   useEffect(() => {
@@ -35,10 +34,20 @@ export default function SearchForm({
     };
   }, []);
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    const text = searchText.trim();
+    if (text) params.set("search", text);
+    if (activeCategory?.rel) params.set("category", activeCategory.rel);
+    const qs = params.toString();
+    navigate(qs ? `/products?${qs}` : "/products");
+  };
+
   return (
     <form
       ref={navRef}
-      onSubmit={(e) => e.preventDefault()}
+      onSubmit={handleSubmit}
       className={parentClass}
     >
       <div className={`select-category ${activeDropdown ? "active" : ""}`}>
@@ -46,7 +55,7 @@ export default function SearchForm({
           onClick={() => setActiveDropdown(true)}
           className="tf-select-custom"
         >
-          {activeCategory}
+          {activeCategory.label}
         </div>
         <ul
           className="select-options"
@@ -65,7 +74,7 @@ export default function SearchForm({
             <li
               rel={item.rel}
               onClick={() => {
-                setActiveCategory(item.label);
+                setActiveCategory(item);
                 setActiveDropdown(false);
               }}
               key={index}
@@ -118,7 +127,12 @@ export default function SearchForm({
       </div>
       <span className="br-line type-vertical bg-line"></span>
       <fieldset>
-        <input type="text" placeholder="Search for products" />
+        <input
+          type="text"
+          placeholder="Search for products"
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+        />
       </fieldset>
       <button type="submit" className="btn-submit-form">
         <i className="icon-search"></i>

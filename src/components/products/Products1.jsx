@@ -1,4 +1,5 @@
 import React, { useEffect, useReducer } from "react";
+import { useSearchParams } from "react-router-dom";
 import FilterOptions from "./FilterOptions";
 import { useCatalog } from "@/context/CatalogContext";
 import { brands as brandOptions } from "@/data/filterOptions";
@@ -9,6 +10,7 @@ import LayoutHandler from "./LayoutHandler";
 import ProductCards3 from "../productCards/ProductCards3";
 
 export default function Products1() {
+  const [searchParams] = useSearchParams();
   const { products: catalog } = useCatalog();
   const [state, dispatch] = useReducer(
     reducer,
@@ -82,6 +84,8 @@ export default function Products1() {
 
   useEffect(() => {
     let filteredArrays = [];
+    const search = (searchParams.get("search") || "").trim().toLowerCase();
+    const category = (searchParams.get("category") || "").trim().toLowerCase();
 
     if (brands.length) {
       const filteredByBrands = [...catalog].filter((elm) =>
@@ -123,11 +127,34 @@ export default function Products1() {
     );
     filteredArrays = [...filteredArrays, filteredByPrice];
 
+    if (category) {
+      const filteredByCategory = [...catalog].filter((elm) =>
+        String(elm.category || "")
+          .toLowerCase()
+          .includes(category)
+      );
+      filteredArrays = [...filteredArrays, filteredByCategory];
+    }
+
+    if (search) {
+      const filteredBySearch = [...catalog].filter((elm) => {
+        const title = String(elm.title || elm.name || "").toLowerCase();
+        const description = String(elm.description || "").toLowerCase();
+        const itemCategory = String(elm.category || "").toLowerCase();
+        return (
+          title.includes(search) ||
+          description.includes(search) ||
+          itemCategory.includes(search)
+        );
+      });
+      filteredArrays = [...filteredArrays, filteredBySearch];
+    }
+
     const commonItems = [...catalog].filter((item) =>
       filteredArrays.every((array) => array.includes(item))
     );
     dispatch({ type: "SET_FILTERED", payload: commonItems });
-  }, [price, isNew, deals, rating, brands, catalog]);
+  }, [price, isNew, deals, rating, brands, catalog, searchParams]);
 
   useEffect(() => {
     if (sortingOption === "Price Ascending") {
