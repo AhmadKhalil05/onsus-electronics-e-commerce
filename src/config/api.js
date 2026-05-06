@@ -1,5 +1,5 @@
 const DEFAULT_BASE =
-  "https://32mk1wn6mk.execute-api.us-east-1.amazonaws.com/onsus-stage";
+  "https://8ng9rwp0gj.execute-api.us-east-1.amazonaws.com/prod-SES-v1";
 const DEFAULT_NEWSLETTER_ENDPOINT = "/newsletter/subscribe";
 const DEFAULT_CONTACT_ENDPOINT = "/contact";
 const DEFAULT_PRODUCTS_ENDPOINT = "/products";
