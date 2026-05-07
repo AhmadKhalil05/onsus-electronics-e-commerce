@@ -8,6 +8,7 @@ const DEFAULT_WISHLIST_ENDPOINT = "/wishlist";
 const DEFAULT_PROFILE_ENDPOINT = "/profile";
 const DEFAULT_CART_ENDPOINT = "/cart";
 const DEFAULT_UPLOAD_ENDPOINT = "/upload";
+const DEFAULT_PURCHASE_ENDPOINT = "/purchase";
 
 function trimTrailingSlash(url) {
   return String(url).replace(/\/+$/, "");
@@ -17,6 +18,8 @@ function trimTrailingSlash(url) {
 export const API_BASE_URL = trimTrailingSlash(
   import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE
 );
+
+export const PURCHASE_BASE_URL = API_BASE_URL;
 
 /** Optional external endpoint for newsletter-only Lambda/API. */
 export const NEWSLETTER_BASE_URL = trimTrailingSlash(
@@ -36,4 +39,5 @@ export const API_ROUTES = {
   upload: import.meta.env.VITE_UPLOAD_ENDPOINT || DEFAULT_UPLOAD_ENDPOINT,
   newsletter:
     import.meta.env.VITE_NEWSLETTER_ENDPOINT || DEFAULT_NEWSLETTER_ENDPOINT,
+  purchase: import.meta.env.VITE_PURCHASE_ENDPOINT || DEFAULT_PURCHASE_ENDPOINT,
 };

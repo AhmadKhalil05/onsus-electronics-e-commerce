@@ -1,13 +1,41 @@
-import React from "react";
-import { Link } from "react-router-dom";
-
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { purchaseClient } from "@/api/http";
+import { API_ROUTES } from "@/config/api";
 import { useContextElement } from "@/context/Context";
 export default function Checkout() {
+  const navigate = useNavigate();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState(null);
+
   const {
     cartProducts,
-
+    setCartProducts,
     totalPrice,
   } = useContextElement();
+
+  const handlePlaceOrder = async (e) => {
+    e.preventDefault();
+    if (cartProducts.length === 0) return;
+    
+    setIsProcessing(true);
+    setError(null);
+    
+    try {
+      // The Lambda handles everything server-side using the sub from JWT
+      const response = await purchaseClient.post(API_ROUTES.purchase);
+      
+      if (response.status === 200) {
+        setCartProducts([]); // Clear local cart
+        navigate("/order-success", { state: { orderId: response.data.orderId } });
+      }
+    } catch (err) {
+      console.error("Purchase failed:", err);
+      setError(err.response?.data?.message || "Checkout failed. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <section className="tf-sp-2">
@@ -220,9 +248,22 @@ export default function Checkout() {
                   </div>
                 </div>
                 <div className="box-btn">
-                  <Link to={`/order-success`} className="tf-btn w-100">
-                    <span className="text-white">Place order</span>
-                  </Link>
+                  {error && (
+                    <div className="alert alert-danger small py-2 mb-3">
+                      {error}
+                    </div>
+                  )}
+                  <button 
+                    type="submit" 
+                    onClick={handlePlaceOrder}
+                    disabled={isProcessing || cartProducts.length === 0}
+                    className="tf-btn w-100 border-0"
+                    style={{ backgroundColor: "var(--primary)" }}
+                  >
+                    <span className="text-white">
+                      {isProcessing ? "Processing..." : "Place order"}
+                    </span>
+                  </button>
                 </div>
               </form>
             </div>

@@ -29,6 +29,9 @@ export default function AdminLayout() {
           <NavLink to="/admin/products" className={linkClass}>
             Products (CRUD)
           </NavLink>
+          <NavLink to="/admin/orders" className={linkClass}>
+            Orders
+          </NavLink>
           <NavLink to="/admin/contacts" className={linkClass}>
             Messages
           </NavLink>

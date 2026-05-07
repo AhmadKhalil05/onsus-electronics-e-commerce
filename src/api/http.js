@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "@/config/api";
+import { API_BASE_URL, PURCHASE_BASE_URL } from "@/config/api";
 import { fetchAuthSession } from "aws-amplify/auth";
 import axios from "axios";
 
@@ -15,7 +15,15 @@ export const apiClient = axios.create({
   },
 });
 
-apiClient.interceptors.request.use(async (config) => {
+export const purchaseClient = axios.create({
+  baseURL: PURCHASE_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+});
+
+const authInterceptor = async (config) => {
   try {
     const { tokens } = await fetchAuthSession();
     const token = tokens?.[tokenType];
@@ -30,7 +38,10 @@ apiClient.interceptors.request.use(async (config) => {
     /* guest — no Authorization header */
   }
   return config;
-});
+};
+
+apiClient.interceptors.request.use(authInterceptor);
+purchaseClient.interceptors.request.use(authInterceptor);
 
 /**
  * @param {import("axios").AxiosRequestConfig} config

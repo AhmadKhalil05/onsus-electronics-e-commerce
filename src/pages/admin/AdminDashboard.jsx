@@ -10,10 +10,10 @@ export default function AdminDashboard() {
   const categories = [...new Set(products.map((p) => p.category))].length;
 
   const cards = [
-    { label: "Products", value: total, hint: "In catalog" },
-    { label: "Categories", value: categories, hint: "Unique types" },
-    { label: "On sale", value: onSale, hint: "With old price" },
-    { label: "Low stock", value: lowStock, hint: "Available under 15" },
+    { label: "Products", value: total, hint: "In catalog", link: "/admin/products" },
+    { label: "Recent Orders", value: "View", hint: "Customer purchases", link: "/admin/orders" },
+    { label: "Categories", value: categories, hint: "Unique types", link: "/admin/products" },
+    { label: "On sale", value: onSale, hint: "With old price", link: "/admin/products" },
   ];
 
   return (
@@ -34,15 +34,18 @@ export default function AdminDashboard() {
       <div className="row g-3 g-xl-4 mb-4">
         {cards.map((c) => (
           <div key={c.label} className="col-6 col-xl-3">
-            <div className="card border-0 shadow-sm h-100 rounded-3">
+            <Link 
+              to={c.link || "#"} 
+              className="card border-0 shadow-sm h-100 rounded-3 text-decoration-none"
+            >
               <div className="card-body">
                 <p className="small text-secondary text-uppercase fw-semibold mb-1">
                   {c.label}
                 </p>
-                <p className="display-6 fw-bold mb-0">{c.value}</p>
+                <p className="display-6 fw-bold mb-0 text-dark">{c.value}</p>
                 <p className="small text-muted mb-0 mt-2">{c.hint}</p>
               </div>
-            </div>
+            </Link>
           </div>
         ))}
       </div>
