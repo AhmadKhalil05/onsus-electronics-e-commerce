@@ -1,5 +1,8 @@
 # Onsus Electronics - AWS Ready Frontend
 
+<img width="1247" height="718" alt="image" src="https://github.com/user-attachments/assets/3527faea-dbc5-450a-b49b-837bcc4064a9" />
+
+
 React + Vite storefront prepared for AWS integration with:
 - Amazon Cognito authentication (Amplify)
 - API Gateway + Lambda services
@@ -115,5 +118,4 @@ When connecting new Lambda routes, update `src/config/api.js` and service files 
 3. Store product images in S3 and save full image URLs in product payload
 
 
-<img width="1247" height="718" alt="image" src="https://github.com/user-attachments/assets/3527faea-dbc5-450a-b49b-837bcc4064a9" />
 
