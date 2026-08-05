@@ -1,124 +1,331 @@
-# Onsus Electronics - AWS Ready Frontend
+[README.md](https://github.com/user-attachments/files/30729594/README.md)
+<div align="center">
 
-<img width="1247" height="718" alt="image" src="https://github.com/user-attachments/assets/3527faea-dbc5-450a-b49b-837bcc4064a9" />
+# Onsus — Serverless E-Commerce on AWS
 
+A responsive React storefront and administration dashboard integrated with a serverless AWS backend.
 
-React + Vite storefront prepared for AWS integration with:
-- Amazon Cognito authentication (Amplify)
-- API Gateway + Lambda services
-- S3-hosted frontend/static assets
+<p>
+  <img src="https://img.shields.io/badge/AWS-Serverless-FF9900?style=for-the-badge&logo=amazonwebservices&logoColor=white" alt="AWS Serverless" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=111827" alt="React 19" />
+  <img src="https://img.shields.io/badge/Vite-6-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite 6" />
+  <img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions" />
+</p>
 
-## Features Covered
+<p>
+  <img src="https://img.shields.io/badge/CloudFront-8C4FFF?style=flat-square&logo=amazoncloudfront&logoColor=white" alt="Amazon CloudFront" />
+  <img src="https://img.shields.io/badge/S3-569A31?style=flat-square&logo=amazons3&logoColor=white" alt="Amazon S3" />
+  <img src="https://img.shields.io/badge/Cognito-DD344C?style=flat-square&logo=amazoncognito&logoColor=white" alt="Amazon Cognito" />
+  <img src="https://img.shields.io/badge/API_Gateway-FF4F8B?style=flat-square&logo=amazonapigateway&logoColor=white" alt="Amazon API Gateway" />
+  <img src="https://img.shields.io/badge/Lambda-FF9900?style=flat-square&logo=awslambda&logoColor=white" alt="AWS Lambda" />
+  <img src="https://img.shields.io/badge/DynamoDB-4053D6?style=flat-square&logo=amazondynamodb&logoColor=white" alt="Amazon DynamoDB" />
+  <img src="https://img.shields.io/badge/CloudWatch-FF4F8B?style=flat-square&logo=amazoncloudwatch&logoColor=white" alt="Amazon CloudWatch" />
+</p>
 
-- Products listing + admin CRUD integration
-- Auth flows with Cognito (email/password + Google Hosted UI)
-- Wishlist integration
-- Contact form integration
-- Fake-buy cart flow (frontend/local storage)
+</div>
 
-## Quick Start
+---
+
+## Overview
+
+Onsus is an electronics e-commerce application built with React and Vite. The frontend communicates with AWS services through Amazon API Gateway and AWS Lambda, uses Amazon Cognito for customer and administrator authentication, stores application data in Amazon DynamoDB, and uploads product images directly to Amazon S3 through presigned URLs.
+
+The repository also includes a GitHub Actions workflow that builds the frontend, synchronizes the generated `dist/` directory to an S3 hosting bucket, and invalidates the associated CloudFront distribution.
+
+> [!IMPORTANT]
+> This repository contains the **frontend application, AWS client integration, and frontend deployment workflow**. Lambda source code, DynamoDB definitions, Cognito configuration, queues, topics, networking resources, and infrastructure-as-code are provisioned separately and are not included here.
+
+## Architecture
+
+<p align="center">
+  <img src="docs/architecture/aws-topology.png" alt="Onsus AWS serverless architecture topology" width="100%" />
+</p>
+
+The diagram represents the **target AWS topology**:
+
+1. Customers and administrators access the application over HTTPS.
+2. AWS WAF can protect the CloudFront distribution.
+3. CloudFront serves the React build stored in an S3 frontend bucket.
+4. Amazon Cognito handles sign-in, token refresh, Google Hosted UI, and administrator group membership.
+5. The frontend sends bearer tokens to Amazon API Gateway.
+6. API Gateway invokes Lambda functions for products, cart, wishlist, profile, checkout, contact forms, and presigned upload URLs.
+7. Lambda functions read and write application data in DynamoDB.
+8. Product images are uploaded directly to S3 using short-lived presigned URLs and may be distributed through CloudFront.
+9. CloudWatch receives backend logs and metrics.
+10. SQS and SNS can be used asynchronously for contact notifications or other background workflows.
+
+## Repository Scope
+
+| Area | Status | Notes |
+|---|---:|---|
+| React storefront | Included | Product browsing, product details, cart, wishlist, checkout, contact, and authentication pages |
+| Admin dashboard | Included | Product CRUD, image upload, customer orders, and contact messages |
+| Cognito client integration | Included | Email/password, Google redirect, token refresh, and `admin` group checks |
+| API Gateway client layer | Included | Centralized Axios clients and route configuration |
+| S3 presigned image uploads | Included | Admin requests an upload URL and sends the file directly to S3 |
+| S3 + CloudFront deployment | Included | Automated through GitHub Actions |
+| Lambda functions | External | Required backend implementation is not stored in this repository |
+| DynamoDB tables | External | Expected by the API contracts |
+| WAF, SQS, SNS, and VPC | Target/optional | Displayed in the architecture but not provisioned by this repository |
+| Payment processing | Not included | The checkout submits a purchase request but does not integrate a payment provider |
+
+## Features
+
+### Storefront
+
+- Responsive electronics catalog
+- Product details and image galleries
+- Shopping cart with local fallback and authenticated API synchronization
+- Wishlist with local fallback and authenticated API synchronization
+- Customer registration and sign-in using Cognito
+- Google sign-in through Cognito Hosted UI
+- Checkout and order submission
+- Contact form and newsletter subscription
+- Route-based navigation with React Router
+
+### Administration
+
+- Administrator authorization through the Cognito `admin` group
+- Product creation, editing, deletion, and search
+- Main, hover, and gallery image uploads
+- Direct-to-S3 uploads using presigned URLs
+- Customer order listing
+- Contact-message listing
+- Protected `/admin/*` routes
+
+### Delivery
+
+- Vite production build
+- Automatic deployment from the `main` branch
+- S3 synchronization using `aws s3 sync`
+- CloudFront cache invalidation after deployment
+
+## Technology Stack
+
+| Layer | Technologies |
+|---|---|
+| UI | React 19, Bootstrap 5, Sass, Swiper, PhotoSwipe |
+| Build tooling | Vite 6, SWC, ESLint |
+| Routing | React Router 7 |
+| Authentication | AWS Amplify Auth, Amazon Cognito |
+| HTTP client | Axios |
+| API layer | Amazon API Gateway and AWS Lambda |
+| Data | Amazon DynamoDB |
+| Object storage | Amazon S3 |
+| CDN | Amazon CloudFront |
+| Monitoring | Amazon CloudWatch |
+| CI/CD | GitHub Actions |
+
+## Project Structure
+
+```text
+.
+├── .github/
+│   └── workflows/
+│       └── deploy.yml              # Build and deploy to S3/CloudFront
+├── public/                         # Static assets, styles, fonts, and images
+├── src/
+│   ├── api/                        # API clients and service wrappers
+│   ├── auth/                       # Cognito session helpers
+│   ├── components/                 # Storefront and dashboard components
+│   ├── config/
+│   │   ├── amplify.js              # Cognito/Amplify configuration
+│   │   └── api.js                  # API base URLs and route paths
+│   ├── context/                    # Auth, catalog, cart, and wishlist state
+│   ├── data/                       # Static UI data
+│   ├── pages/
+│   │   ├── admin/                  # Protected administration pages
+│   │   ├── auth/                   # Login and registration
+│   │   └── products/               # Cart, wishlist, and checkout
+│   ├── App.jsx                     # Application routes
+│   └── main.jsx                    # React entry point
+├── .env.example
+├── package.json
+├── topologyAWS.MD
+├── topologyAWS2.MD
+└── vite.config.js
+```
+
+## Prerequisites
+
+- Node.js 18 or later
+- npm
+- An Amazon Cognito User Pool and App Client
+- An API Gateway deployment connected to the required Lambda functions
+- DynamoDB tables used by those Lambda functions
+- An S3 bucket for product images
+- For frontend deployment: an S3 hosting bucket and CloudFront distribution
+
+## Local Setup
 
 ```bash
+git clone https://github.com/AhmadKhalil05/onsus-aws-serverless-ecommerce.git
+cd onsus-aws-serverless-ecommerce
+
 npm install
+cp .env.example .env
 npm run dev
 ```
 
-Open `http://localhost:5173`.
+The development server is available at:
 
-Production:
-
-```bash
-npm run build
-npm run preview
+```text
+http://localhost:5173
 ```
 
-## Environment Setup
+## Environment Variables
 
-1. Copy `.env.example` to `.env`
-2. Fill values from your AWS resources (Cognito + API Gateway)
+Create `.env` from `.env.example` and replace every placeholder with values from your AWS environment.
 
-Core variables:
-- `VITE_API_BASE_URL` - API Gateway stage base URL
-- `VITE_API_AUTH_TOKEN_TYPE` - `id` or `access` (depends on API Gateway authorizer expectation)
-- `VITE_PRODUCTS_ENDPOINT` - products route path (for example `/products` or `/admin/products`)
-- `VITE_WISHLIST_ENDPOINT` - wishlist route path (default `/wishlist`)
-- `VITE_PROFILE_ENDPOINT` - profile route path (default `/profile`)
-- `VITE_CART_ENDPOINT` - cart route path (default `/cart`)
-- `VITE_CONTACT_ENDPOINT` - contact Lambda route
-- `VITE_NEWSLETTER_ENDPOINT` - newsletter Lambda route
-- `VITE_NEWSLETTER_BASE_URL` - optional separate API base for newsletter
-- `VITE_COGNITO_USER_POOL_ID`
-- `VITE_COGNITO_USER_POOL_CLIENT_ID`
-- `VITE_COGNITO_HOSTED_UI_DOMAIN`
+```dotenv
+# API Gateway
+VITE_API_BASE_URL=https://YOUR_API_ID.execute-api.YOUR_REGION.amazonaws.com/YOUR_STAGE
+VITE_API_AUTH_TOKEN_TYPE=id
 
-### Cognito values from your console
+# API routes
+VITE_PRODUCTS_ENDPOINT=/products
+VITE_ADMIN_PRODUCTS_ENDPOINT=/admin
+VITE_WISHLIST_ENDPOINT=/wishlist
+VITE_PROFILE_ENDPOINT=/profile
+VITE_CART_ENDPOINT=/cart
+VITE_CONTACT_ENDPOINT=/contact
+VITE_UPLOAD_ENDPOINT=/upload
+VITE_PURCHASE_ENDPOINT=/purchase
+VITE_NEWSLETTER_ENDPOINT=/newsletter/subscribe
 
-From your screenshot/config:
-- App client ID: `XXXXXXXXXXXXXXXXXXXXXX`
-- Region: `us-east-1`
-- App client name: `react-client`
+# Optional separate newsletter API
+VITE_NEWSLETTER_BASE_URL=
 
-You still need to copy the exact **User pool ID** (`us-east-1_...`) and **Domain** from Cognito UI into `.env`.
+# Amazon Cognito
+VITE_COGNITO_USER_POOL_ID=YOUR_REGION_XXXXXXXXX
+VITE_COGNITO_USER_POOL_CLIENT_ID=YOUR_APP_CLIENT_ID
+VITE_COGNITO_HOSTED_UI_DOMAIN=YOUR_DOMAIN.auth.YOUR_REGION.amazoncognito.com
+```
 
-## Cognito Setup (AWS Console)
+`VITE_API_AUTH_TOKEN_TYPE` accepts:
 
-For your `react-client` app client:
-1. In Cognito app client, add callback URL:
-   - local: `http://localhost:5173/`
-   - production: your CloudFront URL (for example `https://d84l1y8p4kdic.cloudfront.net/`)
-2. Add logout URL:
-   - local: `http://localhost:5173/`
-   - production: `https://d84l1y8p4kdic.cloudfront.net/`
-3. In OAuth scopes, include at least:
-   - `openid`
-   - `email`
-   - `profile`
-4. If using Google, configure provider under Cognito "Social and external providers".
+- `id` — sends the Cognito ID token
+- `access` — sends the Cognito access token
 
-## Backend Link (API Gateway + Lambda)
+The selected token must match the configuration of the API Gateway authorizer.
 
-1. Protect routes with Cognito authorizer.
-2. Frontend sends `Authorization: Bearer <token>` automatically from `src/api/http.js`.
-3. Choose token type in `.env`:
-   - `VITE_API_AUTH_TOKEN_TYPE=id` for ID token authorizers
-   - `VITE_API_AUTH_TOKEN_TYPE=access` for access token authorizers
-4. Enable CORS on each route (`OPTIONS`) for your frontend domain.
+## Expected API Contract
 
-## One Place For API Integration
+| Method | Route | Purpose | Authentication |
+|---|---|---|---|
+| `GET` | `/products` | List and filter products | API dependent |
+| `POST` | `/admin` | Create a product | Admin bearer token |
+| `PUT` | `/admin?productId=...` | Update a product | Admin bearer token |
+| `DELETE` | `/admin?productId=...` | Delete a product | Admin bearer token |
+| `GET` | `/wishlist` | Load customer wishlist | Customer bearer token |
+| `POST` | `/wishlist` | Add a wishlist item | Customer bearer token |
+| `DELETE` | `/wishlist?productId=...` | Remove a wishlist item | Customer bearer token |
+| `GET` | `/cart` | Load customer cart | Customer bearer token |
+| `PUT` | `/cart` | Replace customer cart | Customer bearer token |
+| `DELETE` | `/cart` | Clear customer cart | Customer bearer token |
+| `GET` | `/profile` | Load customer profile | Customer bearer token |
+| `PUT` | `/profile` | Update customer profile | Customer bearer token |
+| `GET` | `/upload` | Request a presigned S3 upload URL | Admin bearer token |
+| `POST` | `/purchase` | Create an order from the authenticated cart | Customer bearer token |
+| `GET` | `/purchase` | List customer orders | Admin bearer token |
+| `POST` | `/contact` | Submit a customer message | API dependent |
+| `GET` | `/contact` | List customer messages | Admin bearer token |
+| `POST` | `/newsletter/subscribe` | Subscribe an email address | API dependent |
 
-All routes and API base URLs are centralized in:
-- `src/config/api.js`
+## Available Scripts
 
-All HTTP service wrappers are in:
-- `src/api/`
+```bash
+npm run dev       # Start the Vite development server
+npm run build     # Create the production build in dist/
+npm run preview   # Preview the production build locally
+npm run lint      # Run ESLint
+```
 
-When connecting new Lambda routes, update `src/config/api.js` and service files under `src/api/` only.
+## Cognito Configuration
 
-## Current Service Mapping
+Configure the Cognito App Client with:
 
-- Products: `src/api/products.js`
-- Wishlist: `src/api/wishlist.js`
-- Profile: `src/api/profile.js`
-- Cart: `src/api/cart.js`
-- Contact + Newsletter: `src/api/contact.js`
-- Shared client/interceptors: `src/api/http.js`
+- Local callback URL: `http://localhost:5173/`
+- Local sign-out URL: `http://localhost:5173/`
+- Production callback URL: the CloudFront application URL
+- Production sign-out URL: the CloudFront application URL
+- OAuth scopes: `openid`, `email`, and `profile`
+- Google as an identity provider when social sign-in is required
+- A Cognito group named `admin` for administrator accounts
 
-## AWS Deployment Notes
+## AWS Deployment
 
-- Frontend: deploy `dist/` to S3 (or Amplify Hosting)
-- API: expose Lambda functions through API Gateway
-- Auth: configure Cognito User Pool + App Client + Hosted UI callback URLs
-- CORS: allow your frontend domain on API Gateway routes
-- Authorization: protected routes use Bearer token from Cognito (`id` or `access` token by env config)
+The workflow at `.github/workflows/deploy.yml` runs whenever code is pushed to `main`.
 
-## Recommended Next AWS Steps
+Add these repository secrets in GitHub:
 
-1. Create Lambda routes for `contact` and `newsletter`
-2. Add admin delete product Lambda route and wire it in `src/api/products.js`
-3. Store product images in S3 and save full image URLs in product payload
+| Secret | Purpose |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | AWS credential used by the workflow |
+| `AWS_SECRET_ACCESS_KEY` | AWS credential used by the workflow |
+| `S3_BUCKET_NAME` | Frontend hosting bucket |
+| `CLOUDFRONT_DISTRIBUTION_ID` | Distribution invalidated after deployment |
 
+Workflow sequence:
 
+```text
+Checkout → Install dependencies → Build → Configure AWS → Sync dist/ to S3 → Invalidate CloudFront
+```
 
-[1778844341140.pdf](https://github.com/user-attachments/files/30729334/1778844341140.pdf)
+For production environments, prefer GitHub OpenID Connect with a restricted IAM role instead of long-lived AWS access keys.
 
+## Security Notes
 
+- Enforce authorization in API Gateway and Lambda; frontend route protection is not a security boundary.
+- Validate the Cognito issuer, audience/client ID, token use, expiration, and administrator group on protected APIs.
+- Keep S3 buckets private and serve frontend assets through CloudFront.
+- Restrict presigned upload URLs by expiration, object prefix, file type, and maximum size.
+- Configure CORS only for trusted local and production origins.
+- Do not commit `.env` files, credentials, secrets, or private keys.
+- Use a payment provider for real transactions; never process raw card data directly in this frontend.
+
+## Recommended Repository Metadata
+
+**Repository name**
+
+```text
+onsus-aws-serverless-ecommerce
+```
+
+**Description**
+
+```text
+A React electronics storefront and admin dashboard integrated with a serverless AWS architecture using Cognito, API Gateway, Lambda, DynamoDB, S3, and CloudFront.
+```
+
+**Suggested topics**
+
+```text
+aws
+serverless
+react
+vite
+ecommerce
+aws-lambda
+amazon-cognito
+api-gateway
+dynamodb
+amazon-s3
+cloudfront
+github-actions
+```
+
+## Roadmap
+
+- Add infrastructure-as-code using AWS CDK, SAM, or Terraform
+- Move GitHub Actions authentication to AWS OIDC
+- Add automated tests for API response normalization and authentication flows
+- Add a real payment provider
+- Add order-status management
+- Add dead-letter queues and asynchronous notification handling
+- Add CloudWatch dashboards, alarms, and structured logging
+- Add WAF managed rules and rate limiting
+
+## License
+
+No license is currently included. Add a `LICENSE` file before distributing or accepting external contributions.
