@@ -113,4 +113,7 @@ When connecting new Lambda routes, update `src/config/api.js` and service files 
 1. Create Lambda routes for `contact` and `newsletter`
 2. Add admin delete product Lambda route and wire it in `src/api/products.js`
 3. Store product images in S3 and save full image URLs in product payload
-[1778844341140.pdf](https://github.com/user-attachments/files/30729252/1778844341140.pdf)
+
+
+<img width="1247" height="718" alt="image" src="https://github.com/user-attachments/assets/3527faea-dbc5-450a-b49b-837bcc4064a9" />
+
