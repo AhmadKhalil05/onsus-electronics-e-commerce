@@ -1,3 +1,6 @@
+<img width="1225" height="735" alt="image" src="https://github.com/user-attachments/assets/fad9633c-7f74-4107-bbdc-e6c1a76953fb" />
+
+
 <div align="center">
 
 # Onsus — Serverless E-Commerce on AWS
