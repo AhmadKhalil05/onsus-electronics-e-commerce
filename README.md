@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/30729594/README.md)
 <div align="center">
 
 # Onsus — Serverless E-Commerce on AWS
@@ -154,7 +153,7 @@ The diagram represents the **target AWS topology**:
 - An API Gateway deployment connected to the required Lambda functions
 - DynamoDB tables used by those Lambda functions
 - An S3 bucket for product images
-- For frontend deployment: an S3 hosting bucket and CloudFront distribution
+- An S3 hosting bucket and CloudFront distribution for frontend deployment
 
 ## Local Setup
 
@@ -167,7 +166,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The development server is available at:
+The development server will be available at:
 
 ```text
 http://localhost:5173
@@ -175,7 +174,7 @@ http://localhost:5173
 
 ## Environment Variables
 
-Create `.env` from `.env.example` and replace every placeholder with values from your AWS environment.
+Create a `.env` file from `.env.example` and replace every placeholder with values from your AWS environment.
 
 ```dotenv
 # API Gateway
@@ -235,11 +234,28 @@ The selected token must match the configuration of the API Gateway authorizer.
 ## Available Scripts
 
 ```bash
-npm run dev       # Start the Vite development server
-npm run build     # Create the production build in dist/
-npm run preview   # Preview the production build locally
-npm run lint      # Run ESLint
+npm run dev
 ```
+
+Starts the Vite development server.
+
+```bash
+npm run build
+```
+
+Creates the optimized production build inside the `dist/` directory.
+
+```bash
+npm run preview
+```
+
+Runs a local preview of the production build.
+
+```bash
+npm run lint
+```
+
+Runs ESLint to check the project code.
 
 ## Cognito Configuration
 
@@ -255,50 +271,68 @@ Configure the Cognito App Client with:
 
 ## AWS Deployment
 
-The workflow at `.github/workflows/deploy.yml` runs whenever code is pushed to `main`.
+The workflow located at:
 
-Add these repository secrets in GitHub:
+```text
+.github/workflows/deploy.yml
+```
+
+runs whenever code is pushed to the `main` branch.
+
+Add the following repository secrets in GitHub:
 
 | Secret | Purpose |
 |---|---|
-| `AWS_ACCESS_KEY_ID` | AWS credential used by the workflow |
-| `AWS_SECRET_ACCESS_KEY` | AWS credential used by the workflow |
-| `S3_BUCKET_NAME` | Frontend hosting bucket |
-| `CLOUDFRONT_DISTRIBUTION_ID` | Distribution invalidated after deployment |
+| `AWS_ACCESS_KEY_ID` | AWS credential used by the deployment workflow |
+| `AWS_SECRET_ACCESS_KEY` | AWS credential used by the deployment workflow |
+| `S3_BUCKET_NAME` | S3 bucket that hosts the frontend |
+| `CLOUDFRONT_DISTRIBUTION_ID` | CloudFront distribution invalidated after deployment |
 
-Workflow sequence:
+Deployment workflow:
 
 ```text
-Checkout → Install dependencies → Build → Configure AWS → Sync dist/ to S3 → Invalidate CloudFront
+Checkout
+   ↓
+Install dependencies
+   ↓
+Build React application
+   ↓
+Configure AWS credentials
+   ↓
+Upload dist/ to Amazon S3
+   ↓
+Invalidate Amazon CloudFront cache
 ```
 
 For production environments, prefer GitHub OpenID Connect with a restricted IAM role instead of long-lived AWS access keys.
 
 ## Security Notes
 
-- Enforce authorization in API Gateway and Lambda; frontend route protection is not a security boundary.
-- Validate the Cognito issuer, audience/client ID, token use, expiration, and administrator group on protected APIs.
+- Enforce authorization inside API Gateway and Lambda.
+- Frontend route protection is not a security boundary.
+- Validate the Cognito issuer, audience, client ID, token use, expiration, and administrator group.
 - Keep S3 buckets private and serve frontend assets through CloudFront.
 - Restrict presigned upload URLs by expiration, object prefix, file type, and maximum size.
 - Configure CORS only for trusted local and production origins.
-- Do not commit `.env` files, credentials, secrets, or private keys.
-- Use a payment provider for real transactions; never process raw card data directly in this frontend.
+- Never commit `.env` files, AWS credentials, secrets, or private keys.
+- Use a trusted payment provider for real transactions.
+- Never process raw credit-card data directly inside this frontend.
 
 ## Recommended Repository Metadata
 
-**Repository name**
+### Repository Name
 
 ```text
 onsus-aws-serverless-ecommerce
 ```
 
-**Description**
+### Repository Description
 
 ```text
 A React electronics storefront and admin dashboard integrated with a serverless AWS architecture using Cognito, API Gateway, Lambda, DynamoDB, S3, and CloudFront.
 ```
 
-**Suggested topics**
+### Suggested Topics
 
 ```text
 aws
@@ -319,13 +353,16 @@ github-actions
 
 - Add infrastructure-as-code using AWS CDK, SAM, or Terraform
 - Move GitHub Actions authentication to AWS OIDC
-- Add automated tests for API response normalization and authentication flows
+- Add automated frontend and API integration tests
 - Add a real payment provider
 - Add order-status management
-- Add dead-letter queues and asynchronous notification handling
-- Add CloudWatch dashboards, alarms, and structured logging
-- Add WAF managed rules and rate limiting
+- Add dead-letter queues for failed asynchronous events
+- Add CloudWatch dashboards and alarms
+- Add structured Lambda logging
+- Add AWS WAF managed rules and rate limiting
 
 ## License
 
-No license is currently included. Add a `LICENSE` file before distributing or accepting external contributions.
+No license is currently included.
+
+Add a `LICENSE` file before publicly distributing the application or accepting external contributions.
