@@ -119,3 +119,6 @@ When connecting new Lambda routes, update `src/config/api.js` and service files 
 
 
 
+[1778844341140.pdf](https://github.com/user-attachments/files/30729334/1778844341140.pdf)
+
+
